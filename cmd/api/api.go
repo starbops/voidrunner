@@ -1,40 +1,34 @@
 package api
 
 import (
-	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/starbops/voidrunner/internal/handlers"
-	"github.com/starbops/voidrunner/internal/repositories"
+	"github.com/starbops/voidrunner/internal/repositories" // Already present
 	"github.com/starbops/voidrunner/internal/services"
 )
 
 type APIServer struct {
-	addr string
-	db   *sql.DB
+	addr     string
+	taskRepo repositories.TaskRepository // Changed from db *sql.DB
 }
 
-func NewAPIServer(addr string, db *sql.DB) *APIServer {
+func NewAPIServer(addr string, taskRepo repositories.TaskRepository) *APIServer { // Changed db to taskRepo
 	return &APIServer{
-		addr: addr,
-		db:   db,
+		addr:     addr,
+		taskRepo: taskRepo, // Initialize the new field
 	}
 }
 
 func (s *APIServer) Run() error {
 	mux := http.NewServeMux()
 
-	// Initialize repositories
-	taskRepo, err := repositories.NewTaskRepository()
-	if err != nil {
-		slog.Error("failed to initialize task repository",
-			slog.String("error", err.Error()))
-	}
-
 	// Initialize services
-	taskService := services.NewTaskService(taskRepo)
+	// taskRepo is now a field of APIServer (s.taskRepo)
+	// The local taskRepo initialization is removed from here.
+	taskService := services.NewTaskService(s.taskRepo) // Use the passed-in repository
 
 	// Initialize handlers
 	taskHandler := handlers.NewTaskHandler(taskService)
