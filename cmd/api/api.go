@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,29 +11,22 @@ import (
 )
 
 type APIServer struct {
-	addr string
-	db   *sql.DB
+	addr     string
+	taskRepo repositories.TaskRepository
 }
 
-func NewAPIServer(addr string, db *sql.DB) *APIServer {
+func NewAPIServer(addr string, taskRepo repositories.TaskRepository) *APIServer {
 	return &APIServer{
-		addr: addr,
-		db:   db,
+		addr:     addr,
+		taskRepo: taskRepo,
 	}
 }
 
 func (s *APIServer) Run() error {
 	mux := http.NewServeMux()
 
-	// Initialize repositories
-	taskRepo, err := repositories.NewTaskRepository()
-	if err != nil {
-		slog.Error("failed to initialize task repository",
-			slog.String("error", err.Error()))
-	}
-
 	// Initialize services
-	taskService := services.NewTaskService(taskRepo)
+	taskService := services.NewTaskService(s.taskRepo)
 
 	// Initialize handlers
 	taskHandler := handlers.NewTaskHandler(taskService)

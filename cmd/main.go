@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/starbops/voidrunner/cmd/api"
+	"github.com/starbops/voidrunner/internal/repositories"
+	"github.com/starbops/voidrunner/pkg/config"
 )
 
 var (
@@ -19,11 +21,27 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	slog.Info("loading configuration...")
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		slog.Error("failed to load configuration",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	// Initialize repositories
+	taskRepo, err := repositories.NewTaskRepository(cfg)
+	if err != nil {
+		slog.Error("failed to initialize task repository",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	slog.Info("starting server...",
 		slog.String("version", VERSION),
 		slog.String("build", BUILD))
 
-	server := api.NewAPIServer(":8080", nil)
+	server := api.NewAPIServer(":8080", taskRepo)
 	if err := server.Run(); err != nil {
 		slog.Error("failed to start server",
 			slog.String("error", err.Error()))
