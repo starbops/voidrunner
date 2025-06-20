@@ -5,6 +5,14 @@ import (
 	"github.com/starbops/voidrunner/internal/repositories"
 )
 
+type TaskServiceInterface interface {
+	GetTasks() ([]*models.Task, error)
+	GetTask(id int) (*models.Task, error)
+	CreateTask(task *models.Task) (*models.Task, error)
+	UpdateTask(id int, task *models.Task) (*models.Task, error)
+	DeleteTask(id int) error
+}
+
 type TaskService struct {
 	taskRepository repositories.TaskRepository
 }
