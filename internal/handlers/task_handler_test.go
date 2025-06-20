@@ -13,9 +13,12 @@ import (
 )
 
 type mockTaskService struct {
-	tasks   map[int]*models.Task
-	nextID  int
-	failGet bool
+	tasks      map[int]*models.Task
+	nextID     int
+	failGet    bool
+	failCreate bool
+	failUpdate bool
+	failDelete bool
 }
 
 func newMockTaskService() *mockTaskService {
@@ -48,6 +51,9 @@ func (m *mockTaskService) GetTask(id int) (*models.Task, error) {
 }
 
 func (m *mockTaskService) CreateTask(task *models.Task) (*models.Task, error) {
+	if m.failCreate {
+		return nil, errors.New("mock error")
+	}
 	if task == nil {
 		return nil, nil
 	}
@@ -58,6 +64,9 @@ func (m *mockTaskService) CreateTask(task *models.Task) (*models.Task, error) {
 }
 
 func (m *mockTaskService) UpdateTask(id int, task *models.Task) (*models.Task, error) {
+	if m.failUpdate {
+		return nil, errors.New("mock error")
+	}
 	if task == nil || task.ID != id {
 		return nil, nil
 	}
@@ -69,6 +78,9 @@ func (m *mockTaskService) UpdateTask(id int, task *models.Task) (*models.Task, e
 }
 
 func (m *mockTaskService) DeleteTask(id int) error {
+	if m.failDelete {
+		return errors.New("mock error")
+	}
 	if _, exists := m.tasks[id]; !exists {
 		return nil
 	}
@@ -310,5 +322,117 @@ func TestTaskHandler_DeleteTask_InvalidID(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("deleteTask() status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestTaskHandler_CreateTask_ServiceError(t *testing.T) {
+	mockService := newMockTaskService()
+	mockService.failCreate = true
+	handler := NewTaskHandler(mockService)
+
+	task := models.Task{
+		Name:        "New Task",
+		Description: "New Description",
+		Status:      models.TaskStatusPending,
+	}
+
+	body, _ := json.Marshal(task)
+	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	handler.createTask(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("createTask() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestTaskHandler_UpdateTask_InvalidJSON(t *testing.T) {
+	mockService := newMockTaskService()
+	handler := NewTaskHandler(mockService)
+
+	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader([]byte("invalid json")))
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.updateTask(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("updateTask() status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestTaskHandler_UpdateTask_InvalidID(t *testing.T) {
+	mockService := newMockTaskService()
+	handler := NewTaskHandler(mockService)
+
+	task := models.Task{
+		ID:   1,
+		Name: "Test Task",
+	}
+
+	body, _ := json.Marshal(task)
+	req := httptest.NewRequest("PUT", "/invalid/", bytes.NewReader(body))
+	req.SetPathValue("id", "invalid")
+	w := httptest.NewRecorder()
+
+	handler.updateTask(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("updateTask() status = %v, want %v", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestTaskHandler_UpdateTask_ServiceError(t *testing.T) {
+	mockService := newMockTaskService()
+	mockService.failUpdate = true
+	handler := NewTaskHandler(mockService)
+
+	task := models.Task{
+		ID:   1,
+		Name: "Updated Task",
+	}
+
+	body, _ := json.Marshal(task)
+	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.updateTask(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("updateTask() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestTaskHandler_GetTask_ServiceError(t *testing.T) {
+	mockService := newMockTaskService()
+	mockService.failGet = true
+	handler := NewTaskHandler(mockService)
+
+	req := httptest.NewRequest("GET", "/1/", nil)
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.getTask(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("getTask() status = %v, want %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestTaskHandler_DeleteTask_ServiceError(t *testing.T) {
+	mockService := newMockTaskService()
+	mockService.failDelete = true
+	handler := NewTaskHandler(mockService)
+
+	req := httptest.NewRequest("DELETE", "/1/", nil)
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.deleteTask(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("deleteTask() status = %v, want %v", w.Code, http.StatusInternalServerError)
 	}
 }
