@@ -13,12 +13,14 @@ import (
 type APIServer struct {
 	addr     string
 	taskRepo repositories.TaskRepository
+	userRepo repositories.UserRepository
 }
 
-func NewAPIServer(addr string, taskRepo repositories.TaskRepository) *APIServer {
+func NewAPIServer(addr string, taskRepo repositories.TaskRepository, userRepo repositories.UserRepository) *APIServer {
 	return &APIServer{
 		addr:     addr,
 		taskRepo: taskRepo,
+		userRepo: userRepo,
 	}
 }
 
@@ -27,10 +29,14 @@ func (s *APIServer) Run() error {
 
 	// Initialize services
 	taskService := services.NewTaskService(s.taskRepo)
+	userService := services.NewUserService(s.userRepo)
 
 	// Initialize handlers
 	taskHandler := handlers.NewTaskHandler(taskService)
 	taskRouter := taskHandler.RegisterRoutes()
+
+	userHandler := handlers.NewUserHandler(userService)
+	userRouter := userHandler.RegisterRoutes()
 
 	// Register API routes
 	mux.HandleFunc(handlers.APIPrefix, func(w http.ResponseWriter, req *http.Request) {
@@ -39,6 +45,7 @@ func (s *APIServer) Run() error {
 		_, _ = w.Write([]byte(`{"message": "Welcome to the VoidRunner API"}`))
 	})
 	mux.Handle(handlers.APIPrefix+"tasks/", http.StripPrefix(handlers.APIPrefix+"tasks", taskRouter))
+	mux.Handle(handlers.APIPrefix+"users/", http.StripPrefix(handlers.APIPrefix+"users", userRouter))
 
 	server := &http.Server{
 		Addr:     s.addr,
