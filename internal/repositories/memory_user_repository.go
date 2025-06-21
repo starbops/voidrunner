@@ -35,9 +35,25 @@ func (mur *MemoryUserRepository) GetUser(id int) (*models.User, error) {
 
 	user, exists := mur.users[id]
 	if !exists {
-		return nil, nil
+		return nil, ErrUserNotFound
 	}
 	return user, nil
+}
+
+func (mur *MemoryUserRepository) GetByUsernameOrEmail(username, email string) (*models.User, error) {
+	mur.mutex.Lock()
+	defer mur.mutex.Unlock()
+
+	for _, user := range mur.users {
+		if user.Username == username || user.Email == email {
+			return user, nil
+		}
+	}
+	return nil, ErrUserNotFound
+}
+
+func (mur *MemoryUserRepository) Create(user *models.User) (*models.User, error) {
+	return mur.CreateUser(user)
 }
 
 func (mur *MemoryUserRepository) CreateUser(user *models.User) (*models.User, error) {

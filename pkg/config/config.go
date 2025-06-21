@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 const (
@@ -11,6 +12,9 @@ const (
 
 	DefaultPGHost = "localhost"
 	DefaultPGPort = "5432"
+	
+	DefaultJWTSecret     = "voidrunner-secret-change-in-production"
+	DefaultJWTExpiration = 24 * time.Hour
 )
 
 type Config struct {
@@ -20,6 +24,8 @@ type Config struct {
 	PGUser         string
 	PGPassword     string
 	PGDbName       string
+	JWTSecret      string
+	JWTExpiration  time.Duration
 }
 
 func getEnv(key, defaultValue string) string {
@@ -37,12 +43,18 @@ func LoadConfig() (*Config, error) {
 		PGUser:         getEnv("PG_USER", ""),
 		PGPassword:     getEnv("PG_PASSWORD", ""),
 		PGDbName:       getEnv("PG_DBNAME", ""),
+		JWTSecret:      getEnv("JWT_SECRET", DefaultJWTSecret),
+		JWTExpiration:  DefaultJWTExpiration,
 	}
 
 	if cfg.StorageBackend == "postgres" {
 		if cfg.PGHost == "" || cfg.PGPort == "" || cfg.PGUser == "" || cfg.PGPassword == "" || cfg.PGDbName == "" {
 			return nil, fmt.Errorf("missing required PostgreSQL configuration: PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DBNAME must be set when STORAGE_BACKEND is postgres")
 		}
+	}
+
+	if cfg.JWTSecret == DefaultJWTSecret {
+		fmt.Println("WARNING: Using default JWT secret. Please set JWT_SECRET environment variable in production.")
 	}
 
 	return cfg, nil

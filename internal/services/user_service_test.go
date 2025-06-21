@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/starbops/voidrunner/internal/models"
+	"github.com/starbops/voidrunner/internal/repositories"
 )
 
 type mockUserRepository struct {
@@ -37,8 +38,30 @@ func (m *mockUserRepository) GetUser(id int) (*models.User, error) {
 	}
 	user, exists := m.users[id]
 	if !exists {
-		return nil, nil
+		return nil, repositories.ErrUserNotFound
 	}
+	return user, nil
+}
+
+func (m *mockUserRepository) GetByUsernameOrEmail(username, email string) (*models.User, error) {
+	if m.failGet {
+		return nil, errors.New("mock error")
+	}
+	for _, user := range m.users {
+		if user.Username == username || user.Email == email {
+			return user, nil
+		}
+	}
+	return nil, repositories.ErrUserNotFound
+}
+
+func (m *mockUserRepository) Create(user *models.User) (*models.User, error) {
+	if user == nil {
+		return nil, errors.New("user cannot be nil")
+	}
+	user.ID = m.nextID
+	m.nextID++
+	m.users[user.ID] = user
 	return user, nil
 }
 
