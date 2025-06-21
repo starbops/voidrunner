@@ -83,8 +83,11 @@ func TestMemoryUserRepository_GetUser_NotFound(t *testing.T) {
 	repo := NewMemoryUserRepository()
 
 	user, err := repo.GetUser(999)
-	if err != nil {
-		t.Fatalf("GetUser() error = %v", err)
+	if err == nil {
+		t.Fatal("GetUser() should return error for non-existent user")
+	}
+	if err != ErrUserNotFound {
+		t.Errorf("GetUser() error = %v, want %v", err, ErrUserNotFound)
 	}
 	if user != nil {
 		t.Error("GetUser() should return nil for non-existent user")

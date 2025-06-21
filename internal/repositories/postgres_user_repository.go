@@ -25,7 +25,7 @@ func NewPostgresUserRepository(dataSourceName string) (UserRepository, error) {
 }
 
 func (pur *PostgresUserRepository) GetUsers() ([]*models.User, error) {
-	rows, err := pur.Query("SELECT id, username, email, first_name, last_name, created_at, updated_at FROM users")
+	rows, err := pur.Query("SELECT id, username, email, password_hash, first_name, last_name, created_at, updated_at FROM users")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %w", err)
 	}
@@ -34,7 +34,7 @@ func (pur *PostgresUserRepository) GetUsers() ([]*models.User, error) {
 	var users []*models.User
 	for rows.Next() {
 		user := &models.User{}
-		if err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName, &user.CreatedAt, &user.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 		users = append(users, user)
@@ -44,31 +44,48 @@ func (pur *PostgresUserRepository) GetUsers() ([]*models.User, error) {
 
 func (pur *PostgresUserRepository) GetUser(id int) (*models.User, error) {
 	var user models.User
-	err := pur.QueryRow("SELECT id, username, email, first_name, last_name, created_at, updated_at FROM users WHERE id = $1", id).Scan(
-		&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.CreatedAt, &user.UpdatedAt)
+	err := pur.QueryRow("SELECT id, username, email, password_hash, first_name, last_name, created_at, updated_at FROM users WHERE id = $1", id).Scan(
+		&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil, ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user with id %d: %w", id, err)
 	}
 	return &user, nil
 }
 
-func (pur *PostgresUserRepository) CreateUser(user *models.User) (*models.User, error) {
+func (pur *PostgresUserRepository) GetByUsernameOrEmail(username, email string) (*models.User, error) {
+	var user models.User
+	err := pur.QueryRow("SELECT id, username, email, password_hash, first_name, last_name, created_at, updated_at FROM users WHERE username = $1 OR email = $2", username, email).Scan(
+		&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to get user by username or email: %w", err)
+	}
+	return &user, nil
+}
+
+func (pur *PostgresUserRepository) Create(user *models.User) (*models.User, error) {
 	if user == nil {
 		return nil, fmt.Errorf("user cannot be nil")
 	}
 
 	err := pur.QueryRow(
-		"INSERT INTO users (username, email, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING id, created_at, updated_at",
-		user.Username, user.Email, user.FirstName, user.LastName,
+		"INSERT INTO users (username, email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, updated_at",
+		user.Username, user.Email, user.PasswordHash, user.FirstName, user.LastName,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	return user, nil
+}
+
+func (pur *PostgresUserRepository) CreateUser(user *models.User) (*models.User, error) {
+	return pur.Create(user)
 }
 
 func (pur *PostgresUserRepository) UpdateUser(id int, user *models.User) (*models.User, error) {
