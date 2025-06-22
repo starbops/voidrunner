@@ -85,9 +85,32 @@ func TestAPIIntegration(t *testing.T) {
 			t.Errorf("Expected user ID %d, got %d", userID, user.ID)
 		}
 
-		// TODO: Fix PUT routing issue - currently returns 404
 		// Test PUT /api/v1/users/{id}/
-		t.Skip("PUT requests currently failing due to routing issue - needs investigation")
+		updateData := map[string]string{
+			"username":   "updated_user_api",
+			"email":      "updated_api@example.com",
+			"first_name": "Updated",
+			"last_name":  "User",
+		}
+
+		updateJSON, _ := json.Marshal(updateData)
+		putURL := "/api/v1/users/" + strconv.Itoa(userID) + "/"
+		resp = helper.MakeRequest(t, "PUT", putURL, bytes.NewBuffer(updateJSON), token)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		}
+
+		var updatedUser models.User
+		err = json.NewDecoder(resp.Body).Decode(&updatedUser)
+		if err != nil {
+			t.Fatalf("Failed to decode updated user response: %v", err)
+		}
+
+		if updatedUser.Username != updateData["username"] {
+			t.Errorf("Expected username %s, got %s", updateData["username"], updatedUser.Username)
+		}
 	})
 
 	t.Run("Task API Endpoints", func(t *testing.T) {
@@ -159,9 +182,34 @@ func TestAPIIntegration(t *testing.T) {
 			t.Errorf("Expected task ID %d, got %d", taskID, task.ID)
 		}
 
-		// TODO: Fix PUT routing issue - currently returns 404
 		// Test PUT /api/v1/tasks/{id}/
-		t.Skip("PUT requests currently failing due to routing issue - needs investigation")
+		updateTaskData := map[string]string{
+			"name":        "Updated API Task",
+			"description": "Updated task description",
+			"status":      "completed",
+		}
+
+		updateTaskJSON, _ := json.Marshal(updateTaskData)
+		resp = helper.MakeRequest(t, "PUT", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", bytes.NewBuffer(updateTaskJSON), token)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		}
+
+		var updatedTask models.Task
+		err = json.NewDecoder(resp.Body).Decode(&updatedTask)
+		if err != nil {
+			t.Fatalf("Failed to decode updated task response: %v", err)
+		}
+
+		if updatedTask.Name != updateTaskData["name"] {
+			t.Errorf("Expected task name %s, got %s", updateTaskData["name"], updatedTask.Name)
+		}
+
+		if string(updatedTask.Status) != updateTaskData["status"] {
+			t.Errorf("Expected task status %s, got %s", updateTaskData["status"], updatedTask.Status)
+		}
 
 		// Test DELETE /api/v1/tasks/{id}/
 		resp = helper.MakeRequest(t, "DELETE", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", nil, token)
