@@ -9,6 +9,21 @@ jobs:
     name: Test and Build
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: voidrunner
+          POSTGRES_DB: voidrunner_test
+        options: >
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -22,8 +37,17 @@ jobs:
     - name: Download dependencies
       run: go mod download
       
-    - name: Run tests
+    - name: Run unit tests
       run: make test
+      
+    - name: Run integration tests
+      run: go test -v ./test/integration/...
+      env:
+        TEST_PG_HOST: localhost
+        TEST_PG_PORT: 5432
+        TEST_PG_USER: voidrunner
+        TEST_PG_PASSWORD: password
+        TEST_PG_DBNAME: voidrunner_test
       
     - name: Build application (sanity check)
       run: make build
