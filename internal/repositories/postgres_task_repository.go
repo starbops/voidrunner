@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/starbops/voidrunner/internal/models"
+	_ "github.com/lib/pq"
 )
 
 type PostgresTaskRepository struct {

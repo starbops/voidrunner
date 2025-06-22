@@ -91,6 +91,35 @@ Set environment variables:
 - `STORAGE_BACKEND` - "memory" (default) or "postgres"
 - PostgreSQL config: `PG_HOST`, `PG_PORT`, `PG_USER`, `PG_PASSWORD`, `PG_DBNAME`
 
+## Database Setup
+
+### PostgreSQL with Docker
+```bash
+# Start PostgreSQL container
+make db-up
+
+# Run database migrations
+make db-migrate-up
+
+# Run with PostgreSQL (includes above steps)
+make run-postgres
+```
+
+### Manual Migration Commands
+```bash
+# Install golang-migrate tool
+brew install golang-migrate
+
+# Run all migrations
+migrate -path db/migrations -database "postgres://user:pass@localhost:5432/dbname?sslmode=disable" up
+
+# Rollback last migration
+migrate -path db/migrations -database "postgres://user:pass@localhost:5432/dbname?sslmode=disable" down 1
+
+# Reset database (drop and recreate)
+make db-migrate-reset
+```
+
 ## Development
 
 ```bash
@@ -102,4 +131,10 @@ make build
 
 # Clean
 make clean
+
+# Database commands
+make db-up          # Start PostgreSQL
+make db-down        # Stop PostgreSQL
+make db-migrate-up  # Run migrations
+make db-migrate-down # Rollback migrations
 ```
