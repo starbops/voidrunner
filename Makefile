@@ -5,8 +5,16 @@ build:
 
 .PHONY: test
 test:
-	@echo "Running tests..."
+	@echo "Running unit tests..."
 	@go test -cover ./...
+
+.PHONY: test-integration
+test-integration:
+	@echo "Running integration tests..."
+	@go test -v ./test/integration/...
+
+.PHONY: test-all
+test-all: test test-integration
 
 .PHONY: run
 run: build
