@@ -40,9 +40,12 @@ func (us *UserService) CreateUser(user *models.User) (*models.User, error) {
 }
 
 func (us *UserService) UpdateUser(id int, user *models.User) (*models.User, error) {
-	if user == nil || user.ID != id {
+	if user == nil {
 		return nil, nil
 	}
+
+	// Set the ID from the path parameter to ensure consistency
+	user.ID = id
 
 	return us.userRepository.UpdateUser(id, user)
 }

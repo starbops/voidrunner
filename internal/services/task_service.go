@@ -42,9 +42,12 @@ func (ts *TaskService) CreateTask(task *models.Task) (*models.Task, error) {
 }
 
 func (ts *TaskService) UpdateTask(id int, task *models.Task) (*models.Task, error) {
-	if task == nil || task.ID != id {
+	if task == nil {
 		return nil, nil
 	}
+
+	// Set the ID from the path parameter to ensure consistency
+	task.ID = id
 
 	return ts.taskRepository.UpdateTask(id, task)
 }
