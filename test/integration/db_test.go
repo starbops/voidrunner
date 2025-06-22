@@ -104,8 +104,8 @@ func TestDatabaseIntegration(t *testing.T) {
 
 		// Verify user is deleted
 		deletedUser, err := helper.UserRepo.GetUser(createdUser.ID)
-		if err != nil {
-			t.Fatalf("Error checking deleted user: %v", err)
+		if err != nil && err.Error() != "user not found" {
+			t.Fatalf("Unexpected error checking deleted user: %v", err)
 		}
 
 		if deletedUser != nil {
