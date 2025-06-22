@@ -16,7 +16,7 @@ jobs:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: voidrunner
           POSTGRES_DB: voidrunner_test
-        options: >
+        options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
