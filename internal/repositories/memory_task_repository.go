@@ -98,3 +98,59 @@ func (mtr *MemoryTaskRepository) DeleteTask(id int) error {
 	delete(mtr.tasks, id)
 	return nil
 }
+
+func (mtr *MemoryTaskRepository) GetTasksByUserID(userID int) ([]*models.Task, error) {
+	mtr.mutex.Lock()
+	defer mtr.mutex.Unlock()
+
+	tasks := make([]*models.Task, 0)
+	for _, task := range mtr.tasks {
+		if task.UserID == userID {
+			tasks = append(tasks, task)
+		}
+	}
+	return tasks, nil
+}
+
+func (mtr *MemoryTaskRepository) GetTaskByUserID(id, userID int) (*models.Task, error) {
+	mtr.mutex.Lock()
+	defer mtr.mutex.Unlock()
+
+	task, exists := mtr.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil, nil
+	}
+	return task, nil
+}
+
+func (mtr *MemoryTaskRepository) UpdateTaskByUserID(id, userID int, task *models.Task) (*models.Task, error) {
+	mtr.mutex.Lock()
+	defer mtr.mutex.Unlock()
+
+	if task == nil || task.ID != id {
+		return nil, nil
+	}
+
+	existingTask, exists := mtr.tasks[id]
+	if !exists || existingTask.UserID != userID {
+		return nil, nil
+	}
+
+	task.UserID = userID
+	task.UpdatedAt = time.Now().Format(time.RFC3339)
+	mtr.tasks[id] = task
+	return task, nil
+}
+
+func (mtr *MemoryTaskRepository) DeleteTaskByUserID(id, userID int) error {
+	mtr.mutex.Lock()
+	defer mtr.mutex.Unlock()
+
+	task, exists := mtr.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil
+	}
+
+	delete(mtr.tasks, id)
+	return nil
+}

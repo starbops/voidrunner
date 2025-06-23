@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/starbops/voidrunner/internal/middleware"
 	"github.com/starbops/voidrunner/internal/models"
 	"github.com/starbops/voidrunner/internal/services"
 )
@@ -35,7 +36,13 @@ func (th *TaskHandler) RegisterRoutes() *http.ServeMux {
 func (th *TaskHandler) getTasks(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering getTasks handler")
 
-	tasks, err := th.taskService.GetTasks()
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := th.taskService.GetTasksByUserID(userID)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tasks", http.StatusInternalServerError)
 		return
@@ -50,13 +57,19 @@ func (th *TaskHandler) getTasks(w http.ResponseWriter, req *http.Request) {
 func (th *TaskHandler) getTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering getTask handler")
 
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
 	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
-	task, err := th.taskService.GetTask(id)
+	task, err := th.taskService.GetTaskByUserID(id, userID)
 	if err != nil {
 		http.Error(w, "Failed to retrieve task", http.StatusInternalServerError)
 		return
@@ -75,13 +88,19 @@ func (th *TaskHandler) getTask(w http.ResponseWriter, req *http.Request) {
 func (th *TaskHandler) createTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering createTask handler")
 
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
 	var task models.Task
 	if err := json.NewDecoder(req.Body).Decode(&task); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	createdTask, err := th.taskService.CreateTask(&task)
+	createdTask, err := th.taskService.CreateTaskForUser(&task, userID)
 	if err != nil {
 		http.Error(w, "Failed to create task", http.StatusInternalServerError)
 		return
@@ -97,6 +116,12 @@ func (th *TaskHandler) createTask(w http.ResponseWriter, req *http.Request) {
 func (th *TaskHandler) updateTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering updateTask handler")
 
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
 	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
@@ -109,7 +134,7 @@ func (th *TaskHandler) updateTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	updatedTask, err := th.taskService.UpdateTask(id, &task)
+	updatedTask, err := th.taskService.UpdateTaskByUserID(id, userID, &task)
 	if err != nil {
 		http.Error(w, "Failed to update task", http.StatusInternalServerError)
 		return
@@ -128,13 +153,19 @@ func (th *TaskHandler) updateTask(w http.ResponseWriter, req *http.Request) {
 func (th *TaskHandler) deleteTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering deleteTask handler")
 
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
 	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
-	if err := th.taskService.DeleteTask(id); err != nil {
+	if err := th.taskService.DeleteTaskByUserID(id, userID); err != nil {
 		http.Error(w, "Failed to delete task", http.StatusInternalServerError)
 		return
 	}

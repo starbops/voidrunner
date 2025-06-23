@@ -17,11 +17,11 @@ func TestPostgresTaskRepository_GetTasks(t *testing.T) {
 
 	repo := &PostgresTaskRepository{DB: db}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "description", "status", "created_at"}).
-		AddRow(1, "Task 1", "Description 1", "pending", "2023-01-01T00:00:00Z").
-		AddRow(2, "Task 2", "Description 2", "completed", "2023-01-02T00:00:00Z")
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "status", "user_id", "created_at", "updated_at"}).
+		AddRow(1, "Task 1", "Description 1", "pending", 1, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z").
+		AddRow(2, "Task 2", "Description 2", "completed", 1, "2023-01-02T00:00:00Z", "2023-01-02T00:00:00Z")
 
-	mock.ExpectQuery("SELECT id, name, description, status, created_at FROM tasks").
+	mock.ExpectQuery("SELECT id, name, description, status, user_id, created_at, updated_at FROM tasks").
 		WillReturnRows(rows)
 
 	tasks, err := repo.GetTasks()
@@ -50,7 +50,7 @@ func TestPostgresTaskRepository_GetTasks_QueryError(t *testing.T) {
 
 	repo := &PostgresTaskRepository{DB: db}
 
-	mock.ExpectQuery("SELECT id, name, description, status, created_at FROM tasks").
+	mock.ExpectQuery("SELECT id, name, description, status, user_id, created_at, updated_at FROM tasks").
 		WillReturnError(sql.ErrConnDone)
 
 	_, err = repo.GetTasks()
@@ -72,10 +72,10 @@ func TestPostgresTaskRepository_GetTask(t *testing.T) {
 
 	repo := &PostgresTaskRepository{DB: db}
 
-	row := sqlmock.NewRows([]string{"id", "name", "description", "status", "created_at"}).
-		AddRow(1, "Test Task", "Test Description", "pending", "2023-01-01T00:00:00Z")
+	row := sqlmock.NewRows([]string{"id", "name", "description", "status", "user_id", "created_at", "updated_at"}).
+		AddRow(1, "Test Task", "Test Description", "pending", 1, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z")
 
-	mock.ExpectQuery("SELECT id, name, description, status, created_at FROM tasks WHERE id = \\$1").
+	mock.ExpectQuery("SELECT id, name, description, status, user_id, created_at, updated_at FROM tasks WHERE id = \\$1").
 		WithArgs(1).
 		WillReturnRows(row)
 
@@ -105,7 +105,7 @@ func TestPostgresTaskRepository_GetTask_NotFound(t *testing.T) {
 
 	repo := &PostgresTaskRepository{DB: db}
 
-	mock.ExpectQuery("SELECT id, name, description, status, created_at FROM tasks WHERE id = \\$1").
+	mock.ExpectQuery("SELECT id, name, description, status, user_id, created_at, updated_at FROM tasks WHERE id = \\$1").
 		WithArgs(999).
 		WillReturnError(sql.ErrNoRows)
 
@@ -135,11 +135,12 @@ func TestPostgresTaskRepository_CreateTask(t *testing.T) {
 		Name:        "New Task",
 		Description: "New Description",
 		Status:      models.TaskStatusPending,
+		UserID:      1,
 	}
 
-	mock.ExpectQuery("INSERT INTO tasks \\(name, description, status\\) VALUES \\(\\$1, \\$2, \\$3\\) RETURNING id").
-		WithArgs(task.Name, task.Description, task.Status).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectQuery("INSERT INTO tasks \\(name, description, status, user_id\\) VALUES \\(\\$1, \\$2, \\$3, \\$4\\) RETURNING id, created_at, updated_at").
+		WithArgs(task.Name, task.Description, task.Status, task.UserID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).AddRow(1, "2023-01-01T00:00:00Z", "2023-01-01T00:00:00Z"))
 
 	createdTask, err := repo.CreateTask(task)
 	if err != nil {
@@ -193,9 +194,9 @@ func TestPostgresTaskRepository_UpdateTask(t *testing.T) {
 		Status:      models.TaskStatusCompleted,
 	}
 
-	mock.ExpectExec("UPDATE tasks SET name = \\$1, description = \\$2, status = \\$3 WHERE id = \\$4").
+	mock.ExpectQuery("UPDATE tasks SET name = \\$1, description = \\$2, status = \\$3, updated_at = CURRENT_TIMESTAMP WHERE id = \\$4 RETURNING updated_at").
 		WithArgs(task.Name, task.Description, task.Status, task.ID).
-		WillReturnResult(sqlmock.NewResult(0, 1))
+		WillReturnRows(sqlmock.NewRows([]string{"updated_at"}).AddRow("2023-01-01T00:00:00Z"))
 
 	updatedTask, err := repo.UpdateTask(task.ID, task)
 	if err != nil {
@@ -225,13 +226,16 @@ func TestPostgresTaskRepository_UpdateTask_NotFound(t *testing.T) {
 		Name: "Non-existent Task",
 	}
 
-	mock.ExpectExec("UPDATE tasks SET name = \\$1, description = \\$2, status = \\$3 WHERE id = \\$4").
+	mock.ExpectQuery("UPDATE tasks SET name = \\$1, description = \\$2, status = \\$3, updated_at = CURRENT_TIMESTAMP WHERE id = \\$4 RETURNING updated_at").
 		WithArgs(task.Name, task.Description, task.Status, task.ID).
-		WillReturnResult(sqlmock.NewResult(0, 0))
+		WillReturnError(sql.ErrNoRows)
 
-	_, err = repo.UpdateTask(task.ID, task)
-	if err == nil {
-		t.Error("UpdateTask() expected error for non-existent task, got nil")
+	updatedTask, err := repo.UpdateTask(task.ID, task)
+	if err != nil {
+		t.Fatalf("UpdateTask() error = %v", err)
+	}
+	if updatedTask != nil {
+		t.Error("UpdateTask() should return nil for non-existent task")
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

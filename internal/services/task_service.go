@@ -11,6 +11,13 @@ type TaskServiceInterface interface {
 	CreateTask(task *models.Task) (*models.Task, error)
 	UpdateTask(id int, task *models.Task) (*models.Task, error)
 	DeleteTask(id int) error
+	
+	// User-scoped methods
+	GetTasksByUserID(userID int) ([]*models.Task, error)
+	GetTaskByUserID(id, userID int) (*models.Task, error)
+	CreateTaskForUser(task *models.Task, userID int) (*models.Task, error)
+	UpdateTaskByUserID(id, userID int, task *models.Task) (*models.Task, error)
+	DeleteTaskByUserID(id, userID int) error
 }
 
 type TaskService struct {
@@ -58,4 +65,42 @@ func (ts *TaskService) DeleteTask(id int) error {
 	}
 
 	return ts.taskRepository.DeleteTask(id)
+}
+
+func (ts *TaskService) GetTasksByUserID(userID int) ([]*models.Task, error) {
+	return ts.taskRepository.GetTasksByUserID(userID)
+}
+
+func (ts *TaskService) GetTaskByUserID(id, userID int) (*models.Task, error) {
+	return ts.taskRepository.GetTaskByUserID(id, userID)
+}
+
+func (ts *TaskService) CreateTaskForUser(task *models.Task, userID int) (*models.Task, error) {
+	if task == nil {
+		return nil, nil
+	}
+
+	task.Status = models.TaskStatusPending
+	task.UserID = userID
+
+	return ts.taskRepository.CreateTask(task)
+}
+
+func (ts *TaskService) UpdateTaskByUserID(id, userID int, task *models.Task) (*models.Task, error) {
+	if task == nil {
+		return nil, nil
+	}
+
+	task.ID = id
+	task.UserID = userID
+
+	return ts.taskRepository.UpdateTaskByUserID(id, userID, task)
+}
+
+func (ts *TaskService) DeleteTaskByUserID(id, userID int) error {
+	if id <= 0 {
+		return nil
+	}
+
+	return ts.taskRepository.DeleteTaskByUserID(id, userID)
 }
