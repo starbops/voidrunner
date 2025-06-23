@@ -116,11 +116,15 @@ func TestDatabaseIntegration(t *testing.T) {
 	t.Run("Task Repository Operations", func(t *testing.T) {
 		helper.CleanupTestData(t)
 
+		// First create a user for the task
+		testUser := helper.CreateTestUser(t)
+
 		// Test Create Task
 		task := &models.Task{
 			Name:        "Test Task",
 			Description: "Test task description",
 			Status:      models.TaskStatusPending,
+			UserID:      testUser.ID,
 		}
 
 		createdTask, err := helper.TaskRepo.CreateTask(task)
@@ -151,6 +155,7 @@ func TestDatabaseIntegration(t *testing.T) {
 			Name:        "Updated Task",
 			Description: "Updated description",
 			Status:      models.TaskStatusCompleted,
+			UserID:      testUser.ID,
 		}
 
 		result, err := helper.TaskRepo.UpdateTask(createdTask.ID, updatedTask)
