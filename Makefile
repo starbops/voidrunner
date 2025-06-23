@@ -13,8 +13,23 @@ test-integration:
 	@echo "Running integration tests..."
 	@go test -v ./test/integration/...
 
+.PHONY: test-e2e
+test-e2e:
+	@echo "Running E2E tests..."
+	@go test -v ./test/e2e/...
+
+.PHONY: test-e2e-memory
+test-e2e-memory:
+	@echo "Running E2E tests with memory backend..."
+	@STORAGE_BACKEND=memory go test -v ./test/e2e/...
+
+.PHONY: test-e2e-postgres
+test-e2e-postgres:
+	@echo "Running E2E tests with PostgreSQL backend..."
+	@STORAGE_BACKEND=postgres go test -v ./test/e2e/...
+
 .PHONY: test-all
-test-all: test test-integration
+test-all: test test-integration test-e2e
 
 .PHONY: run
 run: build

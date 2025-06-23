@@ -18,6 +18,7 @@ const (
 )
 
 type Config struct {
+	Port           string
 	StorageBackend string
 	PGHost         string
 	PGPort         string
@@ -37,6 +38,7 @@ func getEnv(key, defaultValue string) string {
 
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
+		Port:           getEnv("PORT", "8080"),
 		StorageBackend: getEnv("STORAGE_BACKEND", StorageBackendMemory),
 		PGHost:         getEnv("PG_HOST", DefaultPGHost),
 		PGPort:         getEnv("PG_PORT", DefaultPGPort),
