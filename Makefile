@@ -6,7 +6,7 @@ build:
 .PHONY: test
 test:
 	@echo "Running unit tests..."
-	@go test -cover $(shell go list ./... | grep -v test/integration)
+	@go test -cover $(shell go list ./... | grep -v test/integration | grep -v test/e2e)
 
 .PHONY: test-integration
 test-integration:
