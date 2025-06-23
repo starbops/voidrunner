@@ -186,10 +186,14 @@ func (h *TestHelper) runTestMigrations(t *testing.T) {
 			name VARCHAR(255) NOT NULL,
 			description TEXT,
 			status VARCHAR(50) DEFAULT 'pending',
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		// Migration 003: Add password hash to users
 		`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT ''`,
+		// Migration 004: Add user_id to tasks table
+		`ALTER TABLE tasks ADD COLUMN user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE`,
+		`CREATE INDEX idx_tasks_user_id ON tasks(user_id)`,
 	}
 
 	for i, migration := range migrations {
