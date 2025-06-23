@@ -48,7 +48,7 @@ func main() {
 		slog.String("version", VERSION),
 		slog.String("build", BUILD))
 
-	server := api.NewAPIServer(":8080", cfg, taskRepo, userRepo)
+	server := api.NewAPIServer(":"+cfg.Port, cfg, taskRepo, userRepo)
 	if err := server.Run(); err != nil {
 		slog.Error("failed to start server",
 			slog.String("error", err.Error()))

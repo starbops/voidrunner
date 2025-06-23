@@ -49,6 +49,21 @@ jobs:
         TEST_PG_PASSWORD: password
         TEST_PG_DBNAME: voidrunner_test
       
+    - name: Run E2E tests (Memory Backend)
+      run: go test -v ./test/e2e/...
+      env:
+        STORAGE_BACKEND: memory
+        
+    - name: Run E2E tests (PostgreSQL Backend)
+      run: go test -v ./test/e2e/...
+      env:
+        STORAGE_BACKEND: postgres
+        TEST_PG_HOST: localhost
+        TEST_PG_PORT: 5432
+        TEST_PG_USER: voidrunner
+        TEST_PG_PASSWORD: password
+        TEST_PG_DBNAME: voidrunner_e2e_test
+      
     - name: Build application (sanity check)
       run: make build
       
