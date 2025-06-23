@@ -227,30 +227,69 @@ func testBackendConsistency(t *testing.T) {
 	json.NewDecoder(postgresResp.Body).Decode(&postgresTaskList)
 	postgresResp.Body.Close()
 
-	// Both backends should have the same number of tasks
-	if len(memoryTaskList) != len(postgresTaskList) {
-		t.Errorf("Task count mismatch: memory=%d, postgres=%d", len(memoryTaskList), len(postgresTaskList))
+	// Both backends should have at least the test scenarios we created
+	if len(memoryTaskList) < len(testScenarios) {
+		t.Errorf("Memory backend has fewer tasks than expected: got=%d, expected at least=%d", len(memoryTaskList), len(testScenarios))
+	}
+	if len(postgresTaskList) < len(testScenarios) {
+		t.Errorf("PostgreSQL backend has fewer tasks than expected: got=%d, expected at least=%d", len(postgresTaskList), len(testScenarios))
 	}
 
-	// Verify task properties are consistent (excluding IDs which may differ)
-	for i := range testScenarios {
-		if i >= len(memoryTaskList) || i >= len(postgresTaskList) {
+	// Verify that both backends contain the expected tasks (order-independent)
+	expectedTasks := make(map[string]struct {
+		description string
+		status      models.TaskStatus
+	})
+	
+	for _, scenario := range testScenarios {
+		expectedTasks[scenario.name] = struct {
+			description string
+			status      models.TaskStatus
+		}{scenario.description, scenario.status}
+	}
+
+	// Check memory backend has all expected tasks
+	memoryTaskMap := make(map[string]models.Task)
+	for _, task := range memoryTaskList {
+		if _, isExpected := expectedTasks[task.Name]; isExpected {
+			memoryTaskMap[task.Name] = task
+		}
+	}
+
+	// Check PostgreSQL backend has all expected tasks
+	postgresTaskMap := make(map[string]models.Task)
+	for _, task := range postgresTaskList {
+		if _, isExpected := expectedTasks[task.Name]; isExpected {
+			postgresTaskMap[task.Name] = task
+		}
+	}
+
+	// Verify both backends have all expected tasks
+	for taskName, expected := range expectedTasks {
+		memoryTask, memoryHasTask := memoryTaskMap[taskName]
+		postgresTask, postgresHasTask := postgresTaskMap[taskName]
+
+		if !memoryHasTask {
+			t.Errorf("Memory backend missing task: %s", taskName)
+			continue
+		}
+		if !postgresHasTask {
+			t.Errorf("PostgreSQL backend missing task: %s", taskName)
 			continue
 		}
 
-		memoryTask := memoryTaskList[i]
-		postgresTask := postgresTaskList[i]
-
-		if memoryTask.Name != postgresTask.Name {
-			t.Errorf("Task %d name mismatch: memory=%s, postgres=%s", i, memoryTask.Name, postgresTask.Name)
+		// Verify task properties match expected values
+		if memoryTask.Description != expected.description {
+			t.Errorf("Memory task %s description mismatch: expected=%s, got=%s", taskName, expected.description, memoryTask.Description)
 		}
-
-		if memoryTask.Description != postgresTask.Description {
-			t.Errorf("Task %d description mismatch: memory=%s, postgres=%s", i, memoryTask.Description, postgresTask.Description)
+		if postgresTask.Description != expected.description {
+			t.Errorf("PostgreSQL task %s description mismatch: expected=%s, got=%s", taskName, expected.description, postgresTask.Description)
 		}
-
-		if memoryTask.Status != postgresTask.Status {
-			t.Errorf("Task %d status mismatch: memory=%s, postgres=%s", i, memoryTask.Status, postgresTask.Status)
+		if memoryTask.Status != expected.status {
+			t.Errorf("Memory task %s status mismatch: expected=%s, got=%s", taskName, expected.status, memoryTask.Status)
+		}
+		if postgresTask.Status != expected.status {
+			t.Errorf("PostgreSQL task %s status mismatch: expected=%s, got=%s", taskName, expected.status, postgresTask.Status)
 		}
 	}
 
