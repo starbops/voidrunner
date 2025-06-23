@@ -95,8 +95,8 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 
 	// Step 3: Create multiple tasks
 	tasks := []struct {
-		name        string
-		description string
+		Name        string `json:"name"`
+		Description string `json:"description"`
 	}{
 		{"Complete project", "Finish the VoidRunner project"},
 		{"Write documentation", "Create comprehensive API documentation"},
@@ -116,8 +116,8 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 		json.NewDecoder(resp.Body).Decode(&task)
 		resp.Body.Close()
 
-		if task.Name != taskData.name {
-			t.Errorf("Expected task name %s, got %s", taskData.name, task.Name)
+		if task.Name != taskData.Name {
+			t.Errorf("Expected task name %s, got %s", taskData.Name, task.Name)
 		}
 		if task.Status != models.TaskStatusPending {
 			t.Errorf("Expected task status %s, got %s", models.TaskStatusPending, task.Status)
