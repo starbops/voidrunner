@@ -199,6 +199,7 @@ func TestTaskHandler_GetTasks_ServiceError(t *testing.T) {
 	handler := NewTaskHandler(mockService)
 
 	req := httptest.NewRequest("GET", "/", nil)
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.getTasks(w, req)
@@ -212,11 +213,13 @@ func TestTaskHandler_GetTask(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
 
-	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending}
-	createdTask, _ := mockService.CreateTask(task)
+	userID := 1
+	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending, UserID: userID}
+	createdTask, _ := mockService.CreateTaskForUser(task, userID)
 
 	req := httptest.NewRequest("GET", "/1/", nil)
 	req.SetPathValue("id", strconv.Itoa(createdTask.ID))
+	req = addUserContext(req, userID)
 	w := httptest.NewRecorder()
 
 	handler.getTask(w, req)
@@ -241,6 +244,7 @@ func TestTaskHandler_GetTask_NotFound(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/999/", nil)
 	req.SetPathValue("id", "999")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.getTask(w, req)
@@ -256,6 +260,7 @@ func TestTaskHandler_GetTask_InvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/invalid/", nil)
 	req.SetPathValue("id", "invalid")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.getTask(w, req)
@@ -269,6 +274,7 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
 
+	userID := 1
 	task := models.Task{
 		Name:        "New Task",
 		Description: "New Description",
@@ -277,6 +283,7 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 
 	body, _ := json.Marshal(task)
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	req = addUserContext(req, userID)
 	w := httptest.NewRecorder()
 
 	handler.createTask(w, req)
@@ -300,6 +307,7 @@ func TestTaskHandler_CreateTask_InvalidJSON(t *testing.T) {
 	handler := NewTaskHandler(mockService)
 
 	req := httptest.NewRequest("POST", "/", bytes.NewReader([]byte("invalid json")))
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.createTask(w, req)
@@ -313,8 +321,9 @@ func TestTaskHandler_UpdateTask(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
 
-	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending}
-	createdTask, _ := mockService.CreateTask(task)
+	userID := 1
+	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending, UserID: userID}
+	createdTask, _ := mockService.CreateTaskForUser(task, userID)
 
 	updatedTask := models.Task{
 		ID:     createdTask.ID,
@@ -325,6 +334,7 @@ func TestTaskHandler_UpdateTask(t *testing.T) {
 	body, _ := json.Marshal(updatedTask)
 	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
 	req.SetPathValue("id", strconv.Itoa(createdTask.ID))
+	req = addUserContext(req, userID)
 	w := httptest.NewRecorder()
 
 	handler.updateTask(w, req)
@@ -355,6 +365,7 @@ func TestTaskHandler_UpdateTask_NotFound(t *testing.T) {
 	body, _ := json.Marshal(task)
 	req := httptest.NewRequest("PUT", "/999/", bytes.NewReader(body))
 	req.SetPathValue("id", "999")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.updateTask(w, req)
@@ -368,11 +379,13 @@ func TestTaskHandler_DeleteTask(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
 
-	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending}
-	createdTask, _ := mockService.CreateTask(task)
+	userID := 1
+	task := &models.Task{Name: "Test Task", Status: models.TaskStatusPending, UserID: userID}
+	createdTask, _ := mockService.CreateTaskForUser(task, userID)
 
 	req := httptest.NewRequest("DELETE", "/1/", nil)
 	req.SetPathValue("id", strconv.Itoa(createdTask.ID))
+	req = addUserContext(req, userID)
 	w := httptest.NewRecorder()
 
 	handler.deleteTask(w, req)
@@ -381,7 +394,7 @@ func TestTaskHandler_DeleteTask(t *testing.T) {
 		t.Errorf("deleteTask() status = %v, want %v", w.Code, http.StatusNoContent)
 	}
 
-	deletedTask, _ := mockService.GetTask(createdTask.ID)
+	deletedTask, _ := mockService.GetTaskByUserID(createdTask.ID, userID)
 	if deletedTask != nil {
 		t.Error("Task should be deleted")
 	}
@@ -393,6 +406,7 @@ func TestTaskHandler_DeleteTask_InvalidID(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/invalid/", nil)
 	req.SetPathValue("id", "invalid")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.deleteTask(w, req)
@@ -415,6 +429,7 @@ func TestTaskHandler_CreateTask_ServiceError(t *testing.T) {
 
 	body, _ := json.Marshal(task)
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.createTask(w, req)
@@ -430,6 +445,7 @@ func TestTaskHandler_UpdateTask_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader([]byte("invalid json")))
 	req.SetPathValue("id", "1")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.updateTask(w, req)
@@ -451,6 +467,7 @@ func TestTaskHandler_UpdateTask_InvalidID(t *testing.T) {
 	body, _ := json.Marshal(task)
 	req := httptest.NewRequest("PUT", "/invalid/", bytes.NewReader(body))
 	req.SetPathValue("id", "invalid")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.updateTask(w, req)
@@ -473,6 +490,7 @@ func TestTaskHandler_UpdateTask_ServiceError(t *testing.T) {
 	body, _ := json.Marshal(task)
 	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.updateTask(w, req)
@@ -489,6 +507,7 @@ func TestTaskHandler_GetTask_ServiceError(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/1/", nil)
 	req.SetPathValue("id", "1")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.getTask(w, req)
@@ -505,6 +524,7 @@ func TestTaskHandler_DeleteTask_ServiceError(t *testing.T) {
 
 	req := httptest.NewRequest("DELETE", "/1/", nil)
 	req.SetPathValue("id", "1")
+	req = addUserContext(req, 1)
 	w := httptest.NewRecorder()
 
 	handler.deleteTask(w, req)
