@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/starbops/voidrunner/internal/middleware"
 	"github.com/starbops/voidrunner/internal/models"
 )
 
@@ -88,16 +90,91 @@ func (m *mockTaskService) DeleteTask(id int) error {
 	return nil
 }
 
+func (m *mockTaskService) GetTasksByUserID(userID int) ([]*models.Task, error) {
+	if m.failGet {
+		return nil, errors.New("mock error")
+	}
+	tasks := make([]*models.Task, 0)
+	for _, task := range m.tasks {
+		if task.UserID == userID {
+			tasks = append(tasks, task)
+		}
+	}
+	return tasks, nil
+}
+
+func (m *mockTaskService) GetTaskByUserID(id, userID int) (*models.Task, error) {
+	if m.failGet {
+		return nil, errors.New("mock error")
+	}
+	task, exists := m.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil, nil
+	}
+	return task, nil
+}
+
+func (m *mockTaskService) CreateTaskForUser(task *models.Task, userID int) (*models.Task, error) {
+	if m.failCreate {
+		return nil, errors.New("mock error")
+	}
+	if task == nil {
+		return nil, nil
+	}
+	task.ID = m.nextID
+	task.UserID = userID
+	m.nextID++
+	m.tasks[task.ID] = task
+	return task, nil
+}
+
+func (m *mockTaskService) UpdateTaskByUserID(id, userID int, task *models.Task) (*models.Task, error) {
+	if m.failUpdate {
+		return nil, errors.New("mock error")
+	}
+	if task == nil || task.ID != id {
+		return nil, nil
+	}
+	existingTask, exists := m.tasks[id]
+	if !exists || existingTask.UserID != userID {
+		return nil, nil
+	}
+	task.UserID = userID
+	m.tasks[id] = task
+	return task, nil
+}
+
+func (m *mockTaskService) DeleteTaskByUserID(id, userID int) error {
+	if m.failDelete {
+		return errors.New("mock error")
+	}
+	task, exists := m.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil
+	}
+	delete(m.tasks, id)
+	return nil
+}
+
+func addUserContext(req *http.Request, userID int) *http.Request {
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	ctx = context.WithValue(ctx, middleware.UsernameKey, "testuser")
+	ctx = context.WithValue(ctx, middleware.UserEmailKey, "test@example.com")
+	return req.WithContext(ctx)
+}
+
 func TestTaskHandler_GetTasks(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
 
-	task1 := &models.Task{Name: "Task 1", Status: models.TaskStatusPending}
-	task2 := &models.Task{Name: "Task 2", Status: models.TaskStatusCompleted}
-	mockService.CreateTask(task1)
-	mockService.CreateTask(task2)
+	userID := 1
+	task1 := &models.Task{Name: "Task 1", Status: models.TaskStatusPending, UserID: userID}
+	task2 := &models.Task{Name: "Task 2", Status: models.TaskStatusCompleted, UserID: userID}
+	mockService.CreateTaskForUser(task1, userID)
+	mockService.CreateTaskForUser(task2, userID)
 
 	req := httptest.NewRequest("GET", "/", nil)
+	req = addUserContext(req, userID)
 	w := httptest.NewRecorder()
 
 	handler.getTasks(w, req)

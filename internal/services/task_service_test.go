@@ -71,6 +71,52 @@ func (m *mockTaskRepository) DeleteTask(id int) error {
 	return nil
 }
 
+func (m *mockTaskRepository) GetTasksByUserID(userID int) ([]*models.Task, error) {
+	if m.failGet {
+		return nil, errors.New("mock error")
+	}
+	tasks := make([]*models.Task, 0)
+	for _, task := range m.tasks {
+		if task.UserID == userID {
+			tasks = append(tasks, task)
+		}
+	}
+	return tasks, nil
+}
+
+func (m *mockTaskRepository) GetTaskByUserID(id, userID int) (*models.Task, error) {
+	if m.failGet {
+		return nil, errors.New("mock error")
+	}
+	task, exists := m.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil, nil
+	}
+	return task, nil
+}
+
+func (m *mockTaskRepository) UpdateTaskByUserID(id, userID int, task *models.Task) (*models.Task, error) {
+	if task == nil || task.ID != id {
+		return nil, nil
+	}
+	existingTask, exists := m.tasks[id]
+	if !exists || existingTask.UserID != userID {
+		return nil, nil
+	}
+	task.UserID = userID
+	m.tasks[id] = task
+	return task, nil
+}
+
+func (m *mockTaskRepository) DeleteTaskByUserID(id, userID int) error {
+	task, exists := m.tasks[id]
+	if !exists || task.UserID != userID {
+		return nil
+	}
+	delete(m.tasks, id)
+	return nil
+}
+
 func TestTaskService_CreateTask(t *testing.T) {
 	mockRepo := newMockTaskRepository()
 	service := NewTaskService(mockRepo)

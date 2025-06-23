@@ -15,6 +15,7 @@ type Task struct {
 	// Status of the task.
 	// Can be "pending", "in_progress", or "completed".
 	Status    TaskStatus `json:"status"`
+	UserID    int        `json:"user_id"`
 	CreatedAt string     `json:"created_at"`
 	UpdatedAt string     `json:"updated_at"`
 }
