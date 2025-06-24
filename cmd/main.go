@@ -1,3 +1,29 @@
+// Package main VoidRunner API
+//
+// VoidRunner is a Go HTTP API server for multi-user task management with JWT authentication.
+//
+// The API provides endpoints for user registration, authentication, and task management.
+// All task operations require JWT authentication and are user-scoped.
+//
+//	@title			VoidRunner API
+//	@version		1.0
+//	@description	A multi-user task management API with JWT authentication
+//	@termsOfService	http://swagger.io/terms/
+//
+//	@contact.name	VoidRunner API Support
+//	@contact.url	https://github.com/starbops/voidrunner
+//	@contact.email	support@voidrunner.example.com
+//
+//	@license.name	MIT
+//	@license.url	https://opensource.org/licenses/MIT
+//
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				Type "Bearer" followed by a space and JWT token.
 package main
 
 import (
@@ -5,6 +31,7 @@ import (
 	"os"
 
 	"github.com/starbops/voidrunner/cmd/api"
+	_ "github.com/starbops/voidrunner/docs" // Import generated docs
 	"github.com/starbops/voidrunner/internal/repositories"
 	"github.com/starbops/voidrunner/pkg/config"
 )

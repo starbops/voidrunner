@@ -37,6 +37,15 @@ jobs:
     - name: Download dependencies
       run: go mod download
       
+    - name: Install swag CLI
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+      
+    - name: Generate API documentation
+      run: make docs-generate
+      
+    - name: Validate API documentation
+      run: make docs-validate
+      
     - name: Run unit tests
       run: make test
       

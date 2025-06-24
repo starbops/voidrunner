@@ -163,6 +163,11 @@ func addUserContext(req *http.Request, userID int) *http.Request {
 	return req.WithContext(ctx)
 }
 
+// Helper function to create string pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
 func TestTaskHandler_GetTasks(t *testing.T) {
 	mockService := newMockTaskService()
 	handler := NewTaskHandler(mockService)
@@ -479,15 +484,23 @@ func TestTaskHandler_UpdateTask_InvalidID(t *testing.T) {
 
 func TestTaskHandler_UpdateTask_ServiceError(t *testing.T) {
 	mockService := newMockTaskService()
-	mockService.failUpdate = true
+	// First create a task to update
+	task := &models.Task{
+		Name:        "Test Task",
+		Description: "Test Description",
+		Status:      models.TaskStatusPending,
+	}
+	mockService.CreateTaskForUser(task, 1)
+	
+	// Now set failGet to trigger error when trying to retrieve the task for update
+	mockService.failGet = true
 	handler := NewTaskHandler(mockService)
 
-	task := models.Task{
-		ID:   1,
-		Name: "Updated Task",
+	updateReq := models.UpdateTaskRequest{
+		Name: stringPtr("Updated Task"),
 	}
 
-	body, _ := json.Marshal(task)
+	body, _ := json.Marshal(updateReq)
 	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
 	req = addUserContext(req, 1)
