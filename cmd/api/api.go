@@ -65,8 +65,10 @@ func (s *APIServer) Run() error {
 		_, _ = w.Write([]byte(`{"message": "Welcome to the VoidRunner API"}`))
 	})
 
-	// Swagger documentation endpoint
-	mux.HandleFunc("GET /docs/", httpSwagger.WrapHandler)
+	// Swagger documentation endpoint (conditionally enabled)
+	if s.config.EnableDocs {
+		mux.HandleFunc("GET /docs/", httpSwagger.WrapHandler)
+	}
 
 	// Register authentication routes (no auth required)
 	mux.HandleFunc("POST "+handlers.APIPrefix+"register", authHandler.Register)

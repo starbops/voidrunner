@@ -121,10 +121,10 @@ func (th *TaskHandler) getTask(w http.ResponseWriter, req *http.Request) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			request	body		models.CreateTaskRequest	true	"Task creation data"
-//	@Success		201	{object}	models.Task				"Task created successfully"
-//	@Failure		400	{object}	models.ErrorResponse	"Invalid request payload"
-//	@Failure		401	{object}	models.ErrorResponse	"Unauthorized or user context not found"
-//	@Failure		500	{object}	models.ErrorResponse	"Internal server error"
+//	@Success		201		{object}	models.Task					"Task created successfully"
+//	@Failure		400		{object}	models.ErrorResponse		"Invalid request payload"
+//	@Failure		401		{object}	models.ErrorResponse		"Unauthorized or user context not found"
+//	@Failure		500		{object}	models.ErrorResponse		"Internal server error"
 //	@Router			/tasks [post]
 func (th *TaskHandler) createTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering createTask handler")
@@ -169,13 +169,13 @@ func (th *TaskHandler) createTask(w http.ResponseWriter, req *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id		path		int						true	"Task ID"
+//	@Param			id		path		int							true	"Task ID"
 //	@Param			request	body		models.UpdateTaskRequest	true	"Task update data"
-//	@Success		200	{object}	models.Task				"Task updated successfully"
-//	@Failure		400	{object}	models.ErrorResponse	"Invalid task ID or request payload"
-//	@Failure		401	{object}	models.ErrorResponse	"Unauthorized or user context not found"
-//	@Failure		404	{object}	models.ErrorResponse	"Task not found"
-//	@Failure		500	{object}	models.ErrorResponse	"Internal server error"
+//	@Success		200		{object}	models.Task					"Task updated successfully"
+//	@Failure		400		{object}	models.ErrorResponse		"Invalid task ID or request payload"
+//	@Failure		401		{object}	models.ErrorResponse		"Unauthorized or user context not found"
+//	@Failure		404		{object}	models.ErrorResponse		"Task not found"
+//	@Failure		500		{object}	models.ErrorResponse		"Internal server error"
 //	@Router			/tasks/{id} [put]
 func (th *TaskHandler) updateTask(w http.ResponseWriter, req *http.Request) {
 	slog.Debug("entering updateTask handler")

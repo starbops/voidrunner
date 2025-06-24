@@ -27,11 +27,19 @@ type Config struct {
 	PGDbName       string
 	JWTSecret      string
 	JWTExpiration  time.Duration
+	EnableDocs     bool
 }
 
 func getEnv(key, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return defaultValue
+}
+
+func getBoolEnv(key string, defaultValue bool) bool {
+	if value, exists := os.LookupEnv(key); exists {
+		return value == "true" || value == "1"
 	}
 	return defaultValue
 }
@@ -47,6 +55,7 @@ func LoadConfig() (*Config, error) {
 		PGDbName:       getEnv("PG_DBNAME", ""),
 		JWTSecret:      getEnv("JWT_SECRET", DefaultJWTSecret),
 		JWTExpiration:  DefaultJWTExpiration,
+		EnableDocs:     getBoolEnv("ENABLE_DOCS", false),
 	}
 
 	if cfg.StorageBackend == "postgres" {
