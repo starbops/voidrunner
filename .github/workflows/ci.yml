@@ -40,11 +40,8 @@ jobs:
     - name: Install swag CLI
       run: go install github.com/swaggo/swag/cmd/swag@latest
       
-    - name: Generate API documentation
-      run: make docs-generate
-      
-    - name: Validate API documentation
-      run: make docs-validate
+    - name: Generate and validate API documentation
+      run: make docs
       
     - name: Run unit tests
       run: make test
