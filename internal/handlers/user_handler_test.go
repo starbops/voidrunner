@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
+	"github.com/starbops/voidrunner/internal/middleware"
 	"github.com/starbops/voidrunner/internal/models"
 )
 
@@ -54,9 +55,6 @@ func (m *mockUserService) CreateUser(user *models.User) (*models.User, error) {
 	if m.failCreate {
 		return nil, errors.New("mock error")
 	}
-	if user == nil {
-		return nil, nil
-	}
 	user.ID = m.nextID
 	m.nextID++
 	m.users[user.ID] = user
@@ -67,13 +65,14 @@ func (m *mockUserService) UpdateUser(id int, user *models.User) (*models.User, e
 	if m.failUpdate {
 		return nil, errors.New("mock error")
 	}
-	if user == nil || user.ID != id {
+	existingUser, exists := m.users[id]
+	if !exists {
 		return nil, nil
 	}
-	if _, exists := m.users[id]; !exists {
-		return nil, nil
-	}
+	user.ID = id
 	m.users[id] = user
+	// Preserve the original created_at if it exists
+	user.CreatedAt = existingUser.CreatedAt
 	return user, nil
 }
 
@@ -81,358 +80,210 @@ func (m *mockUserService) DeleteUser(id int) error {
 	if m.failDelete {
 		return errors.New("mock error")
 	}
-	if _, exists := m.users[id]; !exists {
-		return nil
-	}
 	delete(m.users, id)
 	return nil
 }
 
-func TestUserHandler_GetUsers(t *testing.T) {
+func setupUserHandler() (*UserHandler, *mockUserService) {
 	mockService := newMockUserService()
 	handler := NewUserHandler(mockService)
-
-	user1 := &models.User{Username: "user1", Email: "user1@example.com"}
-	user2 := &models.User{Username: "user2", Email: "user2@example.com"}
-	mockService.CreateUser(user1)
-	mockService.CreateUser(user2)
-
-	req := httptest.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
-
-	handler.getUsers(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("getUsers() status = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	var users []*models.User
-	if err := json.NewDecoder(w.Body).Decode(&users); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if len(users) != 2 {
-		t.Errorf("getUsers() returned %v users, want 2", len(users))
-	}
+	return handler, mockService
 }
 
-func TestUserHandler_GetUsers_ServiceError(t *testing.T) {
-	mockService := newMockUserService()
-	mockService.failGet = true
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
-
-	handler.getUsers(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("getUsers() status = %v, want %v", w.Code, http.StatusInternalServerError)
-	}
+func addUserContextForUser(req *http.Request, userID int) *http.Request {
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+	ctx = context.WithValue(ctx, middleware.UsernameKey, "testuser")
+	ctx = context.WithValue(ctx, middleware.UserEmailKey, "test@example.com")
+	return req.WithContext(ctx)
 }
 
-func TestUserHandler_GetUser(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
 
-	user := &models.User{Username: "testuser", Email: "test@example.com"}
-	createdUser, _ := mockService.CreateUser(user)
+func TestUserHandler_GetCurrentUser_Success(t *testing.T) {
+	handler, mockService := setupUserHandler()
 
-	req := httptest.NewRequest("GET", "/1/", nil)
-	req.SetPathValue("id", strconv.Itoa(createdUser.ID))
-	w := httptest.NewRecorder()
-
-	handler.getUser(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("getUser() status = %v, want %v", w.Code, http.StatusOK)
-	}
-
-	var retrievedUser models.User
-	if err := json.NewDecoder(w.Body).Decode(&retrievedUser); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if retrievedUser.ID != createdUser.ID {
-		t.Errorf("getUser() ID = %v, want %v", retrievedUser.ID, createdUser.ID)
-	}
-	if retrievedUser.Username != createdUser.Username {
-		t.Errorf("getUser() Username = %v, want %v", retrievedUser.Username, createdUser.Username)
-	}
-}
-
-func TestUserHandler_GetUser_NotFound(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("GET", "/999/", nil)
-	req.SetPathValue("id", "999")
-	w := httptest.NewRecorder()
-
-	handler.getUser(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("getUser() status = %v, want %v", w.Code, http.StatusNotFound)
-	}
-}
-
-func TestUserHandler_GetUser_InvalidID(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("GET", "/invalid/", nil)
-	req.SetPathValue("id", "invalid")
-	w := httptest.NewRecorder()
-
-	handler.getUser(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("getUser() status = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestUserHandler_GetUser_ServiceError(t *testing.T) {
-	mockService := newMockUserService()
-	mockService.failGet = true
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("GET", "/1/", nil)
-	req.SetPathValue("id", "1")
-	w := httptest.NewRecorder()
-
-	handler.getUser(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("getUser() status = %v, want %v", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestUserHandler_CreateUser(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	user := &models.User{
+	// Add a test user
+	testUser := &models.User{
 		Username:  "testuser",
 		Email:     "test@example.com",
 		FirstName: "Test",
 		LastName:  "User",
 	}
+	createdUser, _ := mockService.CreateUser(testUser)
 
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("GET", "/me", nil)
+	req = addUserContextForUser(req, createdUser.ID)
 	w := httptest.NewRecorder()
 
-	handler.createUser(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("createUser() status = %v, want %v", w.Code, http.StatusCreated)
-	}
-
-	var createdUser models.User
-	if err := json.NewDecoder(w.Body).Decode(&createdUser); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if createdUser.Username != user.Username {
-		t.Errorf("createUser() Username = %v, want %v", createdUser.Username, user.Username)
-	}
-	if createdUser.Email != user.Email {
-		t.Errorf("createUser() Email = %v, want %v", createdUser.Email, user.Email)
-	}
-}
-
-func TestUserHandler_CreateUser_InvalidJSON(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("POST", "/", bytes.NewReader([]byte("invalid json")))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.createUser(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("createUser() status = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestUserHandler_CreateUser_ServiceError(t *testing.T) {
-	mockService := newMockUserService()
-	mockService.failCreate = true
-	handler := NewUserHandler(mockService)
-
-	user := &models.User{Username: "testuser", Email: "test@example.com"}
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.createUser(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("createUser() status = %v, want %v", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestUserHandler_UpdateUser(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	user := &models.User{Username: "testuser", Email: "test@example.com"}
-	createdUser, _ := mockService.CreateUser(user)
-
-	updatedUser := &models.User{
-		ID:        createdUser.ID,
-		Username:  "updateduser",
-		Email:     "updated@example.com",
-		FirstName: "Updated",
-		LastName:  "User",
-	}
-
-	body, _ := json.Marshal(updatedUser)
-	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
-	req.SetPathValue("id", strconv.Itoa(createdUser.ID))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.updateUser(w, req)
+	handler.getCurrentUser(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("updateUser() status = %v, want %v", w.Code, http.StatusOK)
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
 	}
 
-	var result models.User
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var user models.User
+	err := json.NewDecoder(w.Body).Decode(&user)
+	if err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if result.Username != "updateduser" {
-		t.Errorf("updateUser() Username = %v, want %v", result.Username, "updateduser")
+	if user.Username != testUser.Username {
+		t.Errorf("Expected username %s, got %s", testUser.Username, user.Username)
 	}
 }
 
-func TestUserHandler_UpdateUser_NotFound(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
+func TestUserHandler_GetCurrentUser_NoContext(t *testing.T) {
+	handler, _ := setupUserHandler()
 
-	user := &models.User{ID: 999, Username: "nonexistent", Email: "test@example.com"}
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest("PUT", "/999/", bytes.NewReader(body))
-	req.SetPathValue("id", "999")
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("GET", "/me", nil)
 	w := httptest.NewRecorder()
 
-	handler.updateUser(w, req)
+	handler.getCurrentUser(w, req)
 
-	if w.Code != http.StatusNotFound {
-		t.Errorf("updateUser() status = %v, want %v", w.Code, http.StatusNotFound)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }
 
-func TestUserHandler_UpdateUser_InvalidID(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
+func TestUserHandler_GetCurrentUser_ServiceError(t *testing.T) {
+	handler, mockService := setupUserHandler()
+	mockService.failGet = true
 
-	user := &models.User{Username: "testuser", Email: "test@example.com"}
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest("PUT", "/invalid/", bytes.NewReader(body))
-	req.SetPathValue("id", "invalid")
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("GET", "/me", nil)
+	req = addUserContextForUser(req, 1)
 	w := httptest.NewRecorder()
 
-	handler.updateUser(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("updateUser() status = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestUserHandler_UpdateUser_InvalidJSON(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
-
-	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader([]byte("invalid json")))
-	req.SetPathValue("id", "1")
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.updateUser(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("updateUser() status = %v, want %v", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestUserHandler_UpdateUser_ServiceError(t *testing.T) {
-	mockService := newMockUserService()
-	mockService.failUpdate = true
-	handler := NewUserHandler(mockService)
-
-	user := &models.User{ID: 1, Username: "testuser", Email: "test@example.com"}
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest("PUT", "/1/", bytes.NewReader(body))
-	req.SetPathValue("id", "1")
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	handler.updateUser(w, req)
+	handler.getCurrentUser(w, req)
 
 	if w.Code != http.StatusInternalServerError {
-		t.Errorf("updateUser() status = %v, want %v", w.Code, http.StatusInternalServerError)
+		t.Errorf("Expected status code %d, got %d", http.StatusInternalServerError, w.Code)
 	}
 }
 
-func TestUserHandler_DeleteUser(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
+func TestUserHandler_UpdateCurrentUser_Success(t *testing.T) {
+	handler, mockService := setupUserHandler()
 
-	user := &models.User{Username: "testuser", Email: "test@example.com"}
-	createdUser, _ := mockService.CreateUser(user)
+	// Add a test user
+	testUser := &models.User{
+		Username:  "testuser",
+		Email:     "test@example.com",
+		FirstName: "Test",
+		LastName:  "User",
+	}
+	createdUser, _ := mockService.CreateUser(testUser)
 
-	req := httptest.NewRequest("DELETE", "/1/", nil)
-	req.SetPathValue("id", strconv.Itoa(createdUser.ID))
+	// Create update request
+	updateReq := models.UpdateUserRequest{
+		FirstName: stringPtr("Updated"),
+		LastName:  stringPtr("Name"),
+	}
+	reqBody, _ := json.Marshal(updateReq)
+
+	req := httptest.NewRequest("PUT", "/me", bytes.NewBuffer(reqBody))
+	req = addUserContextForUser(req, createdUser.ID)
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handler.deleteUser(w, req)
+	handler.updateCurrentUser(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var user models.User
+	err := json.NewDecoder(w.Body).Decode(&user)
+	if err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if user.FirstName != "Updated" {
+		t.Errorf("Expected first name %s, got %s", "Updated", user.FirstName)
+	}
+	if user.LastName != "Name" {
+		t.Errorf("Expected last name %s, got %s", "Name", user.LastName)
+	}
+}
+
+func TestUserHandler_UpdateCurrentUser_InvalidJSON(t *testing.T) {
+	handler, mockService := setupUserHandler()
+
+	// Add a test user
+	testUser := &models.User{
+		Username: "testuser",
+		Email:    "test@example.com",
+	}
+	createdUser, _ := mockService.CreateUser(testUser)
+
+	req := httptest.NewRequest("PUT", "/me", bytes.NewBuffer([]byte("invalid json")))
+	req = addUserContextForUser(req, createdUser.ID)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.updateCurrentUser(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestUserHandler_DeleteCurrentUser_Success(t *testing.T) {
+	handler, mockService := setupUserHandler()
+
+	// Add a test user
+	testUser := &models.User{
+		Username: "testuser",
+		Email:    "test@example.com",
+	}
+	createdUser, _ := mockService.CreateUser(testUser)
+
+	req := httptest.NewRequest("DELETE", "/me", nil)
+	req = addUserContextForUser(req, createdUser.ID)
+	w := httptest.NewRecorder()
+
+	handler.deleteCurrentUser(w, req)
 
 	if w.Code != http.StatusNoContent {
-		t.Errorf("deleteUser() status = %v, want %v", w.Code, http.StatusNoContent)
+		t.Errorf("Expected status code %d, got %d", http.StatusNoContent, w.Code)
 	}
 
-	deletedUser, _ := mockService.GetUser(createdUser.ID)
-	if deletedUser != nil {
-		t.Error("User should be deleted")
+	// Verify user was deleted
+	user, _ := mockService.GetUser(createdUser.ID)
+	if user != nil {
+		t.Error("Expected user to be deleted")
 	}
 }
 
-func TestUserHandler_DeleteUser_InvalidID(t *testing.T) {
-	mockService := newMockUserService()
-	handler := NewUserHandler(mockService)
+func TestUserHandler_DeleteCurrentUser_NoContext(t *testing.T) {
+	handler, _ := setupUserHandler()
 
-	req := httptest.NewRequest("DELETE", "/invalid/", nil)
-	req.SetPathValue("id", "invalid")
+	req := httptest.NewRequest("DELETE", "/me", nil)
 	w := httptest.NewRecorder()
 
-	handler.deleteUser(w, req)
+	handler.deleteCurrentUser(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("deleteUser() status = %v, want %v", w.Code, http.StatusBadRequest)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }
 
-func TestUserHandler_DeleteUser_ServiceError(t *testing.T) {
-	mockService := newMockUserService()
+func TestUserHandler_DeleteCurrentUser_ServiceError(t *testing.T) {
+	handler, mockService := setupUserHandler()
 	mockService.failDelete = true
-	handler := NewUserHandler(mockService)
 
-	req := httptest.NewRequest("DELETE", "/1/", nil)
-	req.SetPathValue("id", "1")
+	// Add a test user
+	testUser := &models.User{
+		Username: "testuser",
+		Email:    "test@example.com",
+	}
+	createdUser, _ := mockService.CreateUser(testUser)
+
+	req := httptest.NewRequest("DELETE", "/me", nil)
+	req = addUserContextForUser(req, createdUser.ID)
 	w := httptest.NewRecorder()
 
-	handler.deleteUser(w, req)
+	handler.deleteCurrentUser(w, req)
 
 	if w.Code != http.StatusInternalServerError {
-		t.Errorf("deleteUser() status = %v, want %v", w.Code, http.StatusInternalServerError)
+		t.Errorf("Expected status code %d, got %d", http.StatusInternalServerError, w.Code)
 	}
 }
+

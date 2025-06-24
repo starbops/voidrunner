@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
+	"github.com/starbops/voidrunner/internal/middleware"
 	"github.com/starbops/voidrunner/internal/models"
 	"github.com/starbops/voidrunner/internal/services"
 )
@@ -23,46 +23,41 @@ func NewUserHandler(userService services.UserServiceInterface) *UserHandler {
 func (uh *UserHandler) RegisterRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", uh.getUsers)
-	mux.HandleFunc("GET /{id}/", uh.getUser)
-	mux.HandleFunc("POST /", uh.createUser)
-	mux.HandleFunc("PUT /{id}/", uh.updateUser)
-	mux.HandleFunc("DELETE /{id}/", uh.deleteUser)
+	mux.HandleFunc("GET /me", uh.getCurrentUser)
+	mux.HandleFunc("PUT /me", uh.updateCurrentUser)
+	mux.HandleFunc("DELETE /me", uh.deleteCurrentUser)
 
 	return mux
 }
 
-func (uh *UserHandler) getUsers(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("entering getUsers handler")
+// getCurrentUser godoc
+//
+//	@Summary		Get current user profile
+//	@Description	Retrieve the profile information of the currently authenticated user
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	models.User				"Current user profile"
+//	@Failure		401	{object}	models.ErrorResponse	"Unauthorized or user context not found"
+//	@Failure		500	{object}	models.ErrorResponse	"Internal server error"
+//	@Router			/users/me [get]
+func (uh *UserHandler) getCurrentUser(w http.ResponseWriter, req *http.Request) {
+	slog.Debug("entering getCurrentUser handler")
 
-	users, err := uh.userService.GetUsers()
-	if err != nil {
-		http.Error(w, "Failed to retrieve users", http.StatusInternalServerError)
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
-	}
-}
-
-func (uh *UserHandler) getUser(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("entering getUser handler")
-
-	id, err := strconv.Atoi(req.PathValue("id"))
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
-
-	user, err := uh.userService.GetUser(id)
+	user, err := uh.userService.GetUser(userID)
 	if err != nil {
 		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
 		return
 	}
 	if user == nil {
-		http.NotFound(w, req)
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
@@ -72,50 +67,63 @@ func (uh *UserHandler) getUser(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (uh *UserHandler) createUser(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("entering createUser handler")
+// updateCurrentUser godoc
+//
+//	@Summary		Update current user profile
+//	@Description	Update the profile information of the currently authenticated user
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		models.UpdateUserRequest	true	"User update data"
+//	@Success		200		{object}	models.User					"Updated user profile"
+//	@Failure		400		{object}	models.ErrorResponse		"Invalid request payload"
+//	@Failure		401		{object}	models.ErrorResponse		"Unauthorized or user context not found"
+//	@Failure		500		{object}	models.ErrorResponse		"Internal server error"
+//	@Router			/users/me [put]
+func (uh *UserHandler) updateCurrentUser(w http.ResponseWriter, req *http.Request) {
+	slog.Debug("entering updateCurrentUser handler")
 
-	var user models.User
-	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
+		return
+	}
+
+	var updateReq models.UpdateUserRequest
+	if err := json.NewDecoder(req.Body).Decode(&updateReq); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	createdUser, err := uh.userService.CreateUser(&user)
+	// Get existing user first
+	existingUser, err := uh.userService.GetUser(userID)
 	if err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
+		return
+	}
+	if existingUser == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(createdUser); err != nil {
-		http.Error(w, "Failed to encode created user", http.StatusInternalServerError)
+	// Apply updates
+	if updateReq.Username != nil {
+		existingUser.Username = *updateReq.Username
 	}
-}
-
-func (uh *UserHandler) updateUser(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("entering updateUser handler")
-
-	id, err := strconv.Atoi(req.PathValue("id"))
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+	if updateReq.Email != nil {
+		existingUser.Email = *updateReq.Email
+	}
+	if updateReq.FirstName != nil {
+		existingUser.FirstName = *updateReq.FirstName
+	}
+	if updateReq.LastName != nil {
+		existingUser.LastName = *updateReq.LastName
 	}
 
-	var user models.User
-	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	updatedUser, err := uh.userService.UpdateUser(id, &user)
+	updatedUser, err := uh.userService.UpdateUser(userID, existingUser)
 	if err != nil {
 		http.Error(w, "Failed to update user", http.StatusInternalServerError)
-		return
-	}
-	if updatedUser == nil {
-		http.NotFound(w, req)
 		return
 	}
 
@@ -125,16 +133,28 @@ func (uh *UserHandler) updateUser(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (uh *UserHandler) deleteUser(w http.ResponseWriter, req *http.Request) {
-	slog.Debug("entering deleteUser handler")
+// deleteCurrentUser godoc
+//
+//	@Summary		Delete current user account
+//	@Description	Delete the account of the currently authenticated user
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		204	"User account deleted successfully"
+//	@Failure		401	{object}	models.ErrorResponse	"Unauthorized or user context not found"
+//	@Failure		500	{object}	models.ErrorResponse	"Internal server error"
+//	@Router			/users/me [delete]
+func (uh *UserHandler) deleteCurrentUser(w http.ResponseWriter, req *http.Request) {
+	slog.Debug("entering deleteCurrentUser handler")
 
-	id, err := strconv.Atoi(req.PathValue("id"))
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		http.Error(w, "User context not found", http.StatusUnauthorized)
 		return
 	}
 
-	if err := uh.userService.DeleteUser(id); err != nil {
+	if err := uh.userService.DeleteUser(userID); err != nil {
 		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		return
 	}

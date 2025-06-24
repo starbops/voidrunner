@@ -115,3 +115,24 @@ docker-clean:
 	@echo "Cleaning Docker images and containers..."
 	@docker system prune -f
 	@docker rmi voidrunner:latest voidrunner-test 2>/dev/null || true
+
+# Documentation commands
+.PHONY: docs-generate
+docs-generate:
+	@echo "Generating OpenAPI documentation..."
+	@swag init -g cmd/main.go -o docs
+
+.PHONY: docs-validate
+docs-validate: docs-generate
+	@echo "Validating OpenAPI documentation..."
+	@swag fmt
+
+.PHONY: docs-clean
+docs-clean:
+	@echo "Cleaning generated documentation..."
+	@rm -rf docs/
+
+.PHONY: docs-serve
+docs-serve: build
+	@echo "Starting server with documentation available at http://localhost:8080/docs/"
+	@./bin/voidrunner

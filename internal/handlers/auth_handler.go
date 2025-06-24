@@ -28,6 +28,18 @@ func (h *AuthHandler) RegisterRoutes() *http.ServeMux {
 	return mux
 }
 
+// Register godoc
+//
+//	@Summary		Register a new user
+//	@Description	Create a new user account with username, email, and password
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		models.RegisterRequest	true	"User registration data"
+//	@Success		201		{object}	models.User				"User successfully created"
+//	@Failure		400		{object}	models.ErrorResponse	"Invalid request body or validation error"
+//	@Failure		409		{object}	models.ErrorResponse	"User already exists"
+//	@Router			/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,6 +62,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// Login godoc
+//
+//	@Summary		Authenticate user
+//	@Description	Authenticate user with username/email and password, returns JWT token
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		models.LoginRequest		true	"User login credentials"
+//	@Success		200		{object}	models.LoginResponse	"Login successful"
+//	@Failure		400		{object}	models.ErrorResponse	"Invalid request body"
+//	@Failure		401		{object}	models.ErrorResponse	"Invalid credentials"
+//	@Failure		500		{object}	models.ErrorResponse	"Internal server error"
+//	@Router			/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -71,6 +96,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// Logout godoc
+//
+//	@Summary		Logout user
+//	@Description	Invalidate the current JWT token and logout the user
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		204	"Logout successful"
+//	@Failure		400	{object}	models.ErrorResponse	"Invalid or missing authorization header"
+//	@Failure		500	{object}	models.ErrorResponse	"Internal server error"
+//	@Router			/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
