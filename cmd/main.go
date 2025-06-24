@@ -5,20 +5,20 @@
 // The API provides endpoints for user registration, authentication, and task management.
 // All task operations require JWT authentication and are user-scoped.
 //
-//	@title			VoidRunner API
-//	@version		1.0
-//	@description	A multi-user task management API with JWT authentication
-//	@termsOfService	http://swagger.io/terms/
+//	@title						VoidRunner API
+//	@version					1.0
+//	@description				A multi-user task management API with JWT authentication
+//	@termsOfService				http://swagger.io/terms/
 //
-//	@contact.name	VoidRunner API Support
-//	@contact.url	https://github.com/starbops/voidrunner
-//	@contact.email	support@voidrunner.example.com
+//	@contact.name				VoidRunner API Support
+//	@contact.url				https://github.com/starbops/voidrunner
+//	@contact.email				support@voidrunner.example.com
 //
-//	@license.name	MIT
-//	@license.url	https://opensource.org/licenses/MIT
+//	@license.name				MIT
+//	@license.url				https://opensource.org/licenses/MIT
 //
-//	@host		localhost:8080
-//	@BasePath	/api/v1
+//	@host						localhost:8080
+//	@BasePath					/api/v1
 //
 //	@securityDefinitions.apikey	BearerAuth
 //	@in							header
