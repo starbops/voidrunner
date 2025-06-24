@@ -17,57 +17,66 @@ A Go HTTP API server for multi-user task management with JWT authentication, com
 
 ## Quick Start
 
-### Local Development
+### Prerequisites
+- **Go 1.23+** (for local development)
+- **Docker & Docker Compose** (recommended for full setup)
+- **golang-migrate** (for manual database operations)
+
+### Option 1: Docker Compose (Recommended)
+
+Get up and running in 30 seconds:
 
 ```bash
-# Build and run
+# 1. Clone the repository
+git clone https://github.com/starbops/voidrunner.git
+cd voidrunner
+
+# 2. Start application with PostgreSQL database
+make docker-up
+
+# 3. Enable API documentation (development only)
+ENABLE_DOCS=true make docker-up
+```
+
+**🚀 Server is now running at:** http://localhost:8080
+
+**📖 View API Documentation:** http://localhost:8080/docs/ (when `ENABLE_DOCS=true`)
+
+### Option 2: Local Development
+
+```bash
+# 1. Build and run with memory storage
 make run
 
-# Or build and run manually
-make build
-./bin/voidrunner
+# 2. Or run with PostgreSQL
+make run-postgres
 ```
 
-### With Docker Compose
+### Option 3: Docker Only
 
 ```bash
-# Start application with PostgreSQL database
-make docker-compose-up
-
-# Or start in detached mode
-make docker-compose-up-detached
+# Build and run in container (memory backend)
+make docker-run
 ```
 
-Server runs on `http://localhost:8080`
+### Your First API Call
 
-**📖 View API Documentation:** http://localhost:8080/docs/
-
-## API Documentation
-
-### Interactive Documentation
-📖 **Swagger UI:** http://localhost:8080/docs/
-
-The API provides comprehensive OpenAPI documentation with interactive examples, authentication flows, and request/response schemas.
-
-### Authentication Flow
-
-All `/api/v1/users/*` and `/api/v1/tasks/*` endpoints require JWT authentication.
-
-#### 1. Register a new account
 ```bash
+# Health check
+curl http://localhost:8080/api/v1/welcome
+
+# Register a new user
 curl -X POST http://localhost:8080/api/v1/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "john_doe",
-    "email": "john@example.com",
+    "email": "john@example.com", 
     "password": "securepass123",
     "first_name": "John",
     "last_name": "Doe"
   }'
-```
 
-#### 2. Login to get a JWT token
-```bash
+# Login to get your token
 curl -X POST http://localhost:8080/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{
@@ -76,77 +85,71 @@ curl -X POST http://localhost:8080/api/v1/login \
   }'
 ```
 
-Save the `token` from the response.
-
-#### 3. Use the token for API calls
-```bash
-# Get current user profile
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:8080/api/v1/users/me
-
-# Update current user profile
-curl -X PUT http://localhost:8080/api/v1/users/me \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "first_name": "John Updated",
-    "last_name": "Doe"
-  }'
-
-# Create a task
-curl -X POST http://localhost:8080/api/v1/tasks/ \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My Task",
-    "description": "Task description",
-    "status": "pending"
-  }'
-
-# Get all user tasks
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:8080/api/v1/tasks/
-
-# Update a task
-curl -X PUT http://localhost:8080/api/v1/tasks/1/ \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "completed"
-  }'
-```
-
-#### 4. Logout (invalidates token)
-```bash
-curl -X POST http://localhost:8080/api/v1/logout \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+Save the `token` from the login response and use it for authenticated requests!
 
 ## API Endpoints
 
-📖 **Complete documentation with examples:** http://localhost:8080/docs/
+📖 **Complete interactive documentation:** http://localhost:8080/docs/ (requires `ENABLE_DOCS=true`)
 
-### Public Endpoints (no authentication required)
-- `GET /api/v1/welcome` - Welcome message and health check
-- `POST /api/v1/register` - User registration
-- `POST /api/v1/login` - User authentication
+### Public Endpoints (No Authentication Required)
 
-### Protected Endpoints (JWT token required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/welcome` | Welcome message and health check |
+| `POST` | `/api/v1/register` | User registration |
+| `POST` | `/api/v1/login` | User authentication (returns JWT token) |
+
+### Protected Endpoints (JWT Token Required)
+
+All protected endpoints require the `Authorization: Bearer <token>` header.
 
 #### Authentication
-- `POST /api/v1/logout` - User logout (invalidates token)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/logout` | User logout (invalidates token) |
 
 #### User Management
-- `GET /api/v1/users/me` - Get current user profile
-- `PUT /api/v1/users/me` - Update current user profile
-- `DELETE /api/v1/users/me` - Delete current user account
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/users/me` | Get current user profile |
+| `PUT` | `/api/v1/users/me` | Update current user profile |
+| `DELETE` | `/api/v1/users/me` | Delete current user account |
 
-#### Task Management (user-scoped)
-- `GET /api/v1/tasks/` - List user's tasks
-- `POST /api/v1/tasks/` - Create new task
-- `GET /api/v1/tasks/{id}/` - Get specific task
-- `PUT /api/v1/tasks/{id}/` - Update task
-- `DELETE /api/v1/tasks/{id}/` - Delete task
+#### Task Management (User-Scoped)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/tasks` | List user's tasks |
+| `POST` | `/api/v1/tasks` | Create new task |
+| `GET` | `/api/v1/tasks/{id}` | Get specific task |
+| `PUT` | `/api/v1/tasks/{id}` | Update task |
+| `DELETE` | `/api/v1/tasks/{id}` | Delete task |
+
+### Example Usage
+
+```bash
+# Set your token (from login response)
+export TOKEN="your-jwt-token-here"
+
+# Create a task
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Complete project",
+    "description": "Finish the final report",
+    "status": "pending"
+  }'
+
+# List all your tasks
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/tasks
+
+# Update a task status
+curl -X PUT http://localhost:8080/api/v1/tasks/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}'
+```
 
 ## Configuration
 
@@ -161,6 +164,9 @@ curl -X POST http://localhost:8080/api/v1/logout \
 - `JWT_SECRET` - JWT signing secret (⚠️ **required for production**)
 - `JWT_EXPIRATION` - Token expiration duration (default: 24h)
 
+#### Documentation (Security)
+- `ENABLE_DOCS` - Enable Swagger UI at `/docs/` (default: false, only enable in development)
+
 #### PostgreSQL Configuration (when using postgres backend)
 - `PG_HOST` - PostgreSQL host (default: localhost)
 - `PG_PORT` - PostgreSQL port (default: 5432)
@@ -168,163 +174,132 @@ curl -X POST http://localhost:8080/api/v1/logout \
 - `PG_PASSWORD` - Database password
 - `PG_DBNAME` - Database name
 
-### Example Configuration
+### Configuration Examples
 
 ```bash
-# Development (memory backend)
+# Development (memory backend with docs)
 export STORAGE_BACKEND=memory
-export JWT_SECRET=your-secret-key
+export ENABLE_DOCS=true
+export JWT_SECRET=dev-secret-key
 
-# Production (PostgreSQL backend)
+# Production (PostgreSQL backend, docs disabled)
 export STORAGE_BACKEND=postgres
-export JWT_SECRET=your-strong-secret-key
+export JWT_SECRET=your-strong-production-secret
 export PG_HOST=localhost
 export PG_PORT=5432
 export PG_USER=voidrunner
-export PG_PASSWORD=password
+export PG_PASSWORD=secure-password
 export PG_DBNAME=voidrunner
 ```
 
-## Containerization
-
-### Docker Compose (Recommended)
-
-```bash
-# Start application with PostgreSQL database
-make docker-compose-up
-
-# Start in detached mode
-make docker-compose-up-detached
-
-# View logs
-make docker-compose-logs
-
-# Stop services
-make docker-compose-down
-```
-
-### Docker Only
-
-```bash
-# Build Docker image
-make docker-build
-
-# Run with memory backend
-make docker-run
-
-# Run tests in container
-make docker-test
-```
-
-## Database Setup
-
-### PostgreSQL with Docker Compose
-```bash
-# Start PostgreSQL and application together
-make docker-compose-up
-```
-
-### PostgreSQL with Local Development
-```bash
-# Start PostgreSQL container only
-make db-up
-
-# Run database migrations
-make db-migrate-up
-
-# Run application with PostgreSQL (includes above steps)
-make run-postgres
-```
-
-### Manual Migration Commands
-```bash
-# Install golang-migrate tool
-brew install golang-migrate
-
-# Run all migrations
-migrate -path db/migrations -database "postgres://user:pass@localhost:5432/dbname?sslmode=disable" up
-
-# Rollback last migration
-migrate -path db/migrations -database "postgres://user:pass@localhost:5432/dbname?sslmode=disable" down 1
-
-# Reset database (drop and recreate)
-make db-migrate-reset
-```
+⚠️ **Security Note:** The documentation endpoint is disabled by default. Only enable `ENABLE_DOCS=true` in development environments.
 
 ## Development
 
-### Building and Testing
+### Make Commands Reference
 
+#### Core Build Commands
 ```bash
-# Run all tests (unit, integration, E2E)
-make test-all
-
-# Run specific test types
-make test                # Unit tests only
-make test-integration    # Integration tests
-make test-e2e           # End-to-end tests
-
-# Build application
-make build
-
-# Clean build artifacts
-make clean
+make build          # Build the application to ./bin/voidrunner
+make clean          # Remove build artifacts from ./bin
+make run            # Build and run the application (starts server on :8080)
 ```
 
-### API Documentation
-
+#### Test Commands
 ```bash
-# Generate OpenAPI documentation
-make docs-generate
+make test           # Run unit tests with coverage
+make test-integration # Run integration tests
+make test-e2e       # Run end-to-end tests (use STORAGE_BACKEND env var for backend selection)
+make test-all       # Run all test suites (unit, integration, E2E)
 
-# Validate documentation format
-make docs-validate
-
-# Start server with documentation at /docs
-make docs-serve
-
-# Clean generated docs
-make docs-clean
+# Run E2E tests with specific backend
+STORAGE_BACKEND=memory make test-e2e
+STORAGE_BACKEND=postgres make test-e2e
 ```
 
-### Database Commands
-
+#### Database Commands
 ```bash
-make db-up          # Start PostgreSQL container
+make db-up          # Start PostgreSQL container with docker-compose
 make db-down        # Stop PostgreSQL container
-make db-migrate-up  # Run database migrations
-make db-migrate-down # Rollback migrations
-make db-migrate-reset # Reset database (drop and recreate)
+make db-migrate     # Run database migrations
+make db-reset       # Reset database (drop all tables and re-migrate)
+make run-postgres   # Start database, migrate, and run application with PostgreSQL backend
 ```
 
-### Docker Commands
-
+#### Docker Commands
 ```bash
-make docker-build              # Build Docker image
-make docker-run               # Run in container (memory backend)
-make docker-compose-up        # Start with docker-compose
-make docker-compose-down      # Stop docker-compose services
-make docker-test             # Run tests in container
-make docker-clean            # Clean Docker artifacts
+make docker-build   # Build Docker image for the application
+make docker-run     # Build and run application in Docker container (memory backend)
+make docker-up      # Start all services with docker-compose
+make docker-down    # Stop all docker-compose services
+make docker-logs    # Show logs from all services
+make docker-test    # Run tests inside Docker container
+
+# Start in detached mode
+DETACH=1 make docker-up
+```
+
+#### Documentation Commands
+```bash
+make docs           # Generate and validate OpenAPI documentation
+make docs-clean     # Remove generated documentation files
 ```
 
 ### Complete Development Workflow
 
 ```bash
-# 1. Start services with docker-compose
-make docker-compose-up
+# 1. Start services with PostgreSQL
+ENABLE_DOCS=true make docker-up
 
-# 2. View API documentation
+# 2. View API documentation (development only)
 open http://localhost:8080/docs/
 
-# 3. Run tests
+# 3. Run all tests
 make test-all
 
 # 4. Generate/update documentation
-make docs-generate
+make docs
 
 # 5. Clean up
-make docker-compose-down
+make docker-down
+```
+
+### Testing Strategy
+
+The project uses a comprehensive three-tier testing approach:
+
+- **Unit Tests**: Mock-based testing with coverage reporting
+- **Integration Tests**: Real PostgreSQL database with complete HTTP testing
+- **E2E Tests**: Full application testing with both memory and PostgreSQL backends
+
+All tests can be run with both storage backends to ensure compatibility.
+
+### Database Operations
+
+#### Development Setup
+```bash
+# Start PostgreSQL only
+make db-up
+
+# Run migrations
+make db-migrate
+
+# Reset database (useful for development)
+make db-reset
+```
+
+#### Manual Migration Operations
+```bash
+# Install golang-migrate
+brew install golang-migrate
+
+# Run migrations manually
+migrate -path db/migrations \
+  -database "postgres://voidrunner:password@localhost:5432/voidrunner?sslmode=disable" up
+
+# Rollback last migration
+migrate -path db/migrations \
+  -database "postgres://voidrunner:password@localhost:5432/voidrunner?sslmode=disable" down 1
 ```
 
 ## Architecture
