@@ -32,7 +32,13 @@ test-all: test test-integration test-e2e
 .PHONY: db-up db-down db-migrate db-reset run-postgres
 db-up:
 	@echo "Starting PostgreSQL..."
-	@docker-compose up -d db
+	@docker-compose up -d postgres
+	@echo "Waiting for PostgreSQL to be ready..."
+	@until docker-compose exec -T postgres pg_isready -U voidrunner -d voidrunner >/dev/null 2>&1; do \
+		echo "PostgreSQL is not ready yet, waiting..."; \
+		sleep 2; \
+	done
+	@echo "PostgreSQL is ready!"
 
 db-down:
 	@echo "Stopping PostgreSQL..."
