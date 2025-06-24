@@ -72,3 +72,46 @@ db-migrate-reset:
 run-postgres: db-up db-migrate-up
 	@echo "Running with PostgreSQL..."
 	@STORAGE_BACKEND=postgres PG_HOST=localhost PG_PORT=5432 PG_USER=voidrunner PG_PASSWORD=password PG_DBNAME=voidrunner ./bin/voidrunner
+
+# Docker commands
+.PHONY: docker-build
+docker-build:
+	@echo "Building Docker image..."
+	@docker build -t voidrunner:latest .
+
+.PHONY: docker-run
+docker-run: docker-build
+	@echo "Running Docker container..."
+	@docker run -p 8080:8080 --env STORAGE_BACKEND=memory voidrunner:latest
+
+.PHONY: docker-compose-up
+docker-compose-up:
+	@echo "Starting services with docker-compose..."
+	@docker-compose up --build
+
+.PHONY: docker-compose-up-detached
+docker-compose-up-detached:
+	@echo "Starting services with docker-compose (detached)..."
+	@docker-compose up --build -d
+
+.PHONY: docker-compose-down
+docker-compose-down:
+	@echo "Stopping docker-compose services..."
+	@docker-compose down
+
+.PHONY: docker-compose-logs
+docker-compose-logs:
+	@echo "Showing docker-compose logs..."
+	@docker-compose logs -f
+
+.PHONY: docker-test
+docker-test:
+	@echo "Running tests in Docker container..."
+	@docker build --target builder -t voidrunner-test .
+	@docker run --rm voidrunner-test go test -cover ./...
+
+.PHONY: docker-clean
+docker-clean:
+	@echo "Cleaning Docker images and containers..."
+	@docker system prune -f
+	@docker rmi voidrunner:latest voidrunner-test 2>/dev/null || true

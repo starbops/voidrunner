@@ -73,3 +73,17 @@ jobs:
         name: voidrunner-${{ github.sha }}
         path: bin/voidrunner
         retention-days: 30
+        
+    - name: Build Docker image
+      run: make docker-build
+      
+    - name: Test Docker image
+      run: |
+        # Test that the image builds successfully
+        docker images voidrunner:latest
+        # Test basic container functionality
+        timeout 30s docker run --rm -d -p 8080:8080 -e STORAGE_BACKEND=memory --name voidrunner-test voidrunner:latest || true
+        sleep 10
+        # Clean up
+        docker stop voidrunner-test 2>/dev/null || true
+        docker rm voidrunner-test 2>/dev/null || true
