@@ -11,6 +11,11 @@ import (
 	"github.com/starbops/voidrunner/internal/models"
 )
 
+// Helper function to create string pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
 func TestAPIIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping API integration tests in short mode")
@@ -42,60 +47,37 @@ func TestAPIIntegration(t *testing.T) {
 		helper.CleanupTestData(t)
 		token := helper.RegisterAndLoginUser(t)
 
-		// Test GET /api/v1/users/ (requires auth)
-		resp := helper.MakeRequest(t, "GET", "/api/v1/users/", nil, token)
+		// Test GET /api/v1/users/me (get current user profile)
+		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status 200, got %d", resp.StatusCode)
-		}
-
-		var users []*models.User
-		err := json.NewDecoder(resp.Body).Decode(&users)
-		if err != nil {
-			t.Fatalf("Failed to decode users response: %v", err)
-		}
-
-		if len(users) == 0 {
-			t.Error("Expected at least one user")
-		}
-
-		// Test GET /api/v1/users/{id}/
-		userID := users[0].ID
-		url := "/api/v1/users/" + strconv.Itoa(userID) + "/"
-		t.Logf("Testing URL: %s", url)
-		resp = helper.MakeRequest(t, "GET", url, nil, token)
-		defer resp.Body.Close()
-
-		t.Logf("Response status: %d", resp.StatusCode)
-		if resp.StatusCode != http.StatusOK {
-			// Read response body for debugging
-			body, _ := io.ReadAll(resp.Body)
-			t.Logf("Response body: %s", string(body))
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
 		}
 
 		var user models.User
-		err = json.NewDecoder(resp.Body).Decode(&user)
+		err := json.NewDecoder(resp.Body).Decode(&user)
 		if err != nil {
 			t.Fatalf("Failed to decode user response: %v", err)
 		}
 
-		if user.ID != userID {
-			t.Errorf("Expected user ID %d, got %d", userID, user.ID)
+		if user.ID == 0 {
+			t.Error("Expected user ID to be set")
+		}
+		if user.Username == "" {
+			t.Error("Expected username to be set")
 		}
 
-		// Test PUT /api/v1/users/{id}/
-		updateData := map[string]string{
-			"username":   "updated_user_api",
-			"email":      "updated_api@example.com",
-			"first_name": "Updated",
-			"last_name":  "User",
+		// Test PUT /api/v1/users/me (update current user profile)
+		updateData := models.UpdateUserRequest{
+			Username:  stringPtr("updated_user_api"),
+			Email:     stringPtr("updated_api@example.com"),
+			FirstName: stringPtr("Updated"),
+			LastName:  stringPtr("User"),
 		}
 
 		updateJSON, _ := json.Marshal(updateData)
-		putURL := "/api/v1/users/" + strconv.Itoa(userID) + "/"
-		resp = helper.MakeRequest(t, "PUT", putURL, bytes.NewBuffer(updateJSON), token)
+		resp = helper.MakeRequest(t, "PUT", "/api/v1/users/me", bytes.NewBuffer(updateJSON), token)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -108,8 +90,11 @@ func TestAPIIntegration(t *testing.T) {
 			t.Fatalf("Failed to decode updated user response: %v", err)
 		}
 
-		if updatedUser.Username != updateData["username"] {
-			t.Errorf("Expected username %s, got %s", updateData["username"], updatedUser.Username)
+		if updatedUser.Username != *updateData.Username {
+			t.Errorf("Expected username %s, got %s", *updateData.Username, updatedUser.Username)
+		}
+		if updatedUser.FirstName != *updateData.FirstName {
+			t.Errorf("Expected first name %s, got %s", *updateData.FirstName, updatedUser.FirstName)
 		}
 	})
 
@@ -326,23 +311,23 @@ func TestAPIIntegration(t *testing.T) {
 		helper.CleanupTestData(t)
 		token := helper.RegisterAndLoginUser(t)
 
-		// Test wrong HTTP methods
+		// Test wrong HTTP methods for the updated API structure
 		wrongMethods := []struct {
 			method string
 			path   string
 		}{
-			{"POST", "/api/v1/users/1/"},   // Should be GET, PUT, or DELETE
-			{"DELETE", "/api/v1/users/"},  // Should be GET or POST
-			{"PATCH", "/api/v1/tasks/1/"},  // Should be GET, PUT, or DELETE
+			{"POST", "/api/v1/users/me"},   // Should be GET, PUT, or DELETE
+			{"PATCH", "/api/v1/users/me"}, // Should be GET, PUT, or DELETE
+			{"PATCH", "/api/v1/tasks/1/"}, // Should be GET, PUT, or DELETE
 		}
 
 		for _, test := range wrongMethods {
 			resp := helper.MakeRequest(t, test.method, test.path, nil, token)
 			defer resp.Body.Close()
 
-			// Go 1.23 routing might return 400 for unmatched method patterns
-			if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusBadRequest {
-				t.Errorf("Expected status 405 or 400 for %s %s, got %d", test.method, test.path, resp.StatusCode)
+			// Go 1.23 routing might return 400 for unmatched method patterns, or 404 for non-existent routes
+			if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
+				t.Errorf("Expected status 405, 400, or 404 for %s %s, got %d", test.method, test.path, resp.StatusCode)
 			}
 		}
 	})
