@@ -248,7 +248,7 @@ func TestAuthenticationFlow(t *testing.T) {
 		token := helper.RegisterAndLoginUser(t)
 
 		// Test accessing protected endpoint with valid token
-		resp := helper.MakeRequest(t, "GET", "/api/v1/users/", nil, token)
+		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -257,7 +257,7 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Test with malformed token
 		malformedToken := "malformed.token.here"
-		resp = helper.MakeRequest(t, "GET", "/api/v1/users/", nil, malformedToken)
+		resp = helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, malformedToken)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusUnauthorized {
@@ -270,7 +270,7 @@ func TestAuthenticationFlow(t *testing.T) {
 			// Token didn't have Bearer prefix to begin with
 			rawToken = "just-a-raw-token-without-bearer"
 		}
-		resp = helper.MakeRequest(t, "GET", "/api/v1/users/", nil, rawToken)
+		resp = helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, rawToken)
 		defer resp.Body.Close()
 
 		// This might return 200 if our auth implementation accepts raw tokens
@@ -282,7 +282,7 @@ func TestAuthenticationFlow(t *testing.T) {
 		token := helper.RegisterAndLoginUser(t)
 
 		// Verify token works before logout
-		resp := helper.MakeRequest(t, "GET", "/api/v1/users/", nil, token)
+		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
 		resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
@@ -320,7 +320,7 @@ func TestAuthenticationFlow(t *testing.T) {
 		token := helper.RegisterAndLoginUser(t)
 
 		// Verify token works
-		resp := helper.MakeRequest(t, "GET", "/api/v1/users/", nil, token)
+		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
 		resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
