@@ -67,5 +67,11 @@ jobs:
     - name: Build application (sanity check)
       run: make build
       
+    - name: Build Docker image (sanity check)
+      run: make docker-build
+      
     - name: Clean up build artifacts
       run: make clean
+      
+    - name: Clean up Docker artifacts
+      run: make docker-clean

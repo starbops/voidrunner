@@ -1,0 +1,22 @@
+# Development override for docker-compose
+# This file provides development-friendly settings that override docker-compose.yml
+# Use: docker-compose up (automatically includes this file)
+
+services:
+  voidrunner:
+    build:
+      context: .
+      target: builder
+    volumes:
+      # Mount source code for development (live reload)
+      - .:/app
+      - /app/bin  # Exclude bin directory from mount
+    command: ["go", "run", "./cmd/main.go"]
+    environment:
+      # Development environment variables
+      GO_ENV: development
+    # Override healthcheck for faster development feedback
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
