@@ -214,7 +214,7 @@ make run            # Build and run the application (starts server on :8080)
 #### Test Commands
 ```bash
 make test           # Run unit tests with coverage
-make test-integration # Run integration tests
+make test-integration # Run integration tests (always fresh, no caching)
 make test-e2e       # Run end-to-end tests (use STORAGE_BACKEND env var for backend selection)
 make test-all       # Run all test suites (unit, integration, E2E)
 
@@ -247,12 +247,13 @@ DETACH=1 make docker-up
 #### Docker Test Commands
 ```bash
 make docker-test              # Run unit tests in Docker container
-make docker-test-integration  # Run integration tests with PostgreSQL in Docker
+make docker-test-integration  # Run integration tests with PostgreSQL in Docker (always fresh, no caching)
 make docker-test-e2e          # Run E2E tests with both backends in Docker
 make docker-test-all          # Run all test suites in Docker containers
 
 # Note: Docker test commands use isolated test containers and databases
 # They automatically handle service dependencies and cleanup
+# Integration tests run fresh every time to ensure external database state changes are detected
 ```
 
 #### Documentation Commands
@@ -286,7 +287,7 @@ The project uses a comprehensive three-tier testing approach with both local and
 
 #### Test Types
 - **Unit Tests**: Mock-based testing with coverage reporting (no external dependencies)
-- **Integration Tests**: Real PostgreSQL database with complete HTTP testing
+- **Integration Tests**: Real PostgreSQL database with complete HTTP testing (always run fresh to detect database state changes)
 - **E2E Tests**: Full application testing with both memory and PostgreSQL backends
 
 #### Execution Options
