@@ -20,7 +20,7 @@ test:
 
 test-integration:
 	@echo "Running integration tests..."
-	@go test -v ./test/integration/...
+	@go test -count=1 -v ./test/integration/...
 
 test-e2e:
 	@echo "Running E2E tests..."
@@ -86,7 +86,7 @@ docker-test:
 
 docker-test-integration:
 	@echo "Running integration tests in Docker container with PostgreSQL..."
-	@docker-compose -f docker-compose.test.yml run --rm voidrunner-test go test -v ./test/integration/...
+	@docker-compose -f docker-compose.test.yml run --rm voidrunner-test go test -count=1 -v ./test/integration/...
 	@docker-compose -f docker-compose.test.yml down
 
 docker-test-e2e:
