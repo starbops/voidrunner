@@ -26,6 +26,7 @@ services:
       PG_USER: voidrunner
       PG_PASSWORD: password
       PG_DBNAME: voidrunner
+      ENABLE_DOCS: ${ENABLE_DOCS:-false}
     depends_on:
       postgres:
         condition: service_healthy

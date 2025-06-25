@@ -33,6 +33,21 @@ func NewAPIServer(addr string, cfg *config.Config, taskRepo repositories.TaskRep
 	}
 }
 
+// WelcomeHandler godoc
+//
+//	@Summary		Welcome message
+//	@Description	Returns a welcome message and serves as a health check endpoint
+//	@Tags			System
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.MessageResponse	"Welcome message"
+//	@Router			/welcome [get]
+func (s *APIServer) WelcomeHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"message": "Welcome to the VoidRunner API"}`))
+}
+
 func (s *APIServer) Run() error {
 	mux := http.NewServeMux()
 
@@ -50,20 +65,7 @@ func (s *APIServer) Run() error {
 	authMiddleware := middleware.AuthMiddleware(s.tokenManager)
 
 	// Welcome endpoint (no auth required)
-	// Welcome godoc
-	//
-	//	@Summary		Welcome message
-	//	@Description	Returns a welcome message and serves as a health check endpoint
-	//	@Tags			System
-	//	@Accept			json
-	//	@Produce		json
-	//	@Success		200	{object}	models.MessageResponse	"Welcome message"
-	//	@Router			/welcome [get]
-	mux.HandleFunc("GET "+handlers.APIPrefix+"welcome", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"message": "Welcome to the VoidRunner API"}`))
-	})
+	mux.HandleFunc("GET "+handlers.APIPrefix+"welcome", s.WelcomeHandler)
 
 	// Swagger documentation endpoint (conditionally enabled)
 	if s.config.EnableDocs {
