@@ -239,10 +239,20 @@ make docker-run     # Build and run application in Docker container (memory back
 make docker-up      # Start all services with docker-compose
 make docker-down    # Stop all docker-compose services
 make docker-logs    # Show logs from all services
-make docker-test    # Run tests inside Docker container
 
 # Start in detached mode
 DETACH=1 make docker-up
+```
+
+#### Docker Test Commands
+```bash
+make docker-test              # Run unit tests in Docker container
+make docker-test-integration  # Run integration tests with PostgreSQL in Docker
+make docker-test-e2e          # Run E2E tests with both backends in Docker
+make docker-test-all          # Run all test suites in Docker containers
+
+# Note: Docker test commands use isolated test containers and databases
+# They automatically handle service dependencies and cleanup
 ```
 
 #### Documentation Commands
@@ -272,13 +282,31 @@ make docker-down
 
 ### Testing Strategy
 
-The project uses a comprehensive three-tier testing approach:
+The project uses a comprehensive three-tier testing approach with both local and Docker execution options:
 
-- **Unit Tests**: Mock-based testing with coverage reporting
+#### Test Types
+- **Unit Tests**: Mock-based testing with coverage reporting (no external dependencies)
 - **Integration Tests**: Real PostgreSQL database with complete HTTP testing
 - **E2E Tests**: Full application testing with both memory and PostgreSQL backends
 
-All tests can be run with both storage backends to ensure compatibility.
+#### Execution Options
+**Local Testing** (requires local Go and optionally PostgreSQL):
+```bash
+make test              # Unit tests only
+make test-integration  # Integration tests (requires PostgreSQL)
+make test-e2e          # E2E tests (supports both backends)
+make test-all          # All test suites
+```
+
+**Docker Testing** (fully containerized, no local dependencies):
+```bash
+make docker-test              # Unit tests in Docker
+make docker-test-integration  # Integration tests with containerized PostgreSQL
+make docker-test-e2e          # E2E tests with both backends in Docker
+make docker-test-all          # All test suites in Docker containers
+```
+
+The Docker test commands provide isolated environments and automatic cleanup, making them ideal for CI/CD pipelines or when you don't want to set up local PostgreSQL.
 
 ### Database Operations
 

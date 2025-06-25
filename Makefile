@@ -58,7 +58,7 @@ run-postgres: db-up db-migrate build
 	@STORAGE_BACKEND=postgres PG_HOST=localhost PG_PORT=5432 PG_USER=voidrunner PG_PASSWORD=password PG_DBNAME=voidrunner ./bin/voidrunner
 
 # Docker targets  
-.PHONY: docker-build docker-run docker-up docker-down docker-logs docker-test
+.PHONY: docker-build docker-run docker-up docker-down docker-logs docker-test docker-test-integration docker-test-e2e docker-test-all
 docker-build:
 	@echo "Building Docker image..."
 	@docker build -t voidrunner:latest .
@@ -80,9 +80,24 @@ docker-logs:
 	@docker-compose logs -f
 
 docker-test:
-	@echo "Running tests in Docker container..."
+	@echo "Running unit tests in Docker container..."
 	@docker build --target builder -t voidrunner-test .
-	@docker run --rm voidrunner-test go test -cover ./...
+	@docker run --rm voidrunner-test go test -cover $$(go list ./... | grep -v test/integration | grep -v test/e2e)
+
+docker-test-integration:
+	@echo "Running integration tests in Docker container with PostgreSQL..."
+	@docker-compose -f docker-compose.test.yml run --rm voidrunner-test go test -v ./test/integration/...
+	@docker-compose -f docker-compose.test.yml down
+
+docker-test-e2e:
+	@echo "Running E2E tests in Docker container..."
+	@echo "Testing with memory backend..."
+	@docker-compose -f docker-compose.test.yml run --rm -e STORAGE_BACKEND=memory voidrunner-e2e go test -v ./test/e2e/...
+	@echo "Testing with PostgreSQL backend..."
+	@docker-compose -f docker-compose.test.yml run --rm -e STORAGE_BACKEND=postgres voidrunner-e2e go test -v ./test/e2e/...
+	@docker-compose -f docker-compose.test.yml down
+
+docker-test-all: docker-test docker-test-integration docker-test-e2e
 
 # Documentation targets
 .PHONY: docs docs-clean
