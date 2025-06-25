@@ -1,0 +1,54 @@
+# Docker Compose configuration for testing
+# This file provides test-specific services and configuration
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: voidrunner
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: voidrunner
+    ports:
+      - "5433:5432"  # Use different port to avoid conflicts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voidrunner -d voidrunner"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for faster tests
+
+  voidrunner-test:
+    build:
+      context: .
+      target: builder
+    environment:
+      TEST_PG_HOST: postgres-test
+      TEST_PG_PORT: 5432
+      TEST_PG_USER: voidrunner
+      TEST_PG_PASSWORD: password
+      TEST_PG_DBNAME: voidrunner_test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+
+  voidrunner-e2e:
+    build:
+      context: .
+      target: builder
+    environment:
+      TEST_PG_HOST: postgres-test
+      TEST_PG_PORT: 5432
+      TEST_PG_USER: voidrunner
+      TEST_PG_PASSWORD: password
+      STORAGE_BACKEND: memory  # Default backend for E2E tests
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app

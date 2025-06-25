@@ -146,6 +146,24 @@ func (h *E2ETestHelper) buildApplication(t *testing.T) {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
 
+	// Check if we're in Docker (working directory starts with /app)
+	if filepath.HasPrefix(projectRoot, "/app") {
+		// Navigate to /app root
+		appRoot := "/app"
+		// In Docker, the application is already built in the image
+		if _, err := os.Stat(filepath.Join(appRoot, "voidrunner")); err == nil {
+			return // Application already exists
+		}
+		// If voidrunner binary doesn't exist, build it
+		cmd := exec.Command("go", "build", "-o", "./voidrunner", "./cmd/main.go")
+		cmd.Dir = appRoot
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Failed to build application in Docker: %v\nOutput: %s", err, output)
+		}
+		return
+	}
+
 	// Navigate to project root (assuming we're in test/e2e)
 	for filepath.Base(projectRoot) != "voidrunner" {
 		projectRoot = filepath.Dir(projectRoot)
@@ -170,12 +188,21 @@ func (h *E2ETestHelper) startServer(t *testing.T) {
 		t.Fatalf("Failed to get working directory: %v", err)
 	}
 
-	// Navigate to project root
-	for filepath.Base(projectRoot) != "voidrunner" {
-		projectRoot = filepath.Dir(projectRoot)
-		if projectRoot == "/" {
-			t.Fatalf("Could not find project root")
+	var binaryPath string
+	
+	// Check if we're in Docker (working directory starts with /app)
+	if filepath.HasPrefix(projectRoot, "/app") {
+		binaryPath = "/app/voidrunner"
+		projectRoot = "/app"
+	} else {
+		// Navigate to project root
+		for filepath.Base(projectRoot) != "voidrunner" {
+			projectRoot = filepath.Dir(projectRoot)
+			if projectRoot == "/" {
+				t.Fatalf("Could not find project root")
+			}
 		}
+		binaryPath = "./bin/voidrunner"
 	}
 
 	// Prepare environment variables
@@ -192,7 +219,7 @@ func (h *E2ETestHelper) startServer(t *testing.T) {
 	}
 
 	// Start the server
-	h.ServerProcess = exec.Command("./bin/voidrunner")
+	h.ServerProcess = exec.Command(binaryPath)
 	h.ServerProcess.Dir = projectRoot
 	h.ServerProcess.Env = env
 
