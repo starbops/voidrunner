@@ -40,7 +40,8 @@ ENABLE_DOCS=true make docker-up
 
 **🚀 Server is now running at:** http://localhost:8080
 
-**📖 View API Documentation:** http://localhost:8080/docs/ (when `ENABLE_DOCS=true`)
+**📖 View API Documentation:** http://localhost:8080/docs/ (when `ENABLE_DOCS=true`)  
+**Note:** The docs URL will redirect to `/docs/index.html` automatically
 
 ### Option 2: Local Development
 
@@ -103,10 +104,12 @@ Save the `token` from the login response and use it for authenticated requests!
 
 All protected endpoints require the `Authorization: Bearer <token>` header.
 
+**Note:** The logout endpoint (`/api/v1/logout`) requires authentication but handles JWT validation manually rather than using the standard auth middleware.
+
 #### Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/v1/logout` | User logout (invalidates token) |
+| `POST` | `/api/v1/logout` | User logout (invalidates token) - requires Bearer token in Authorization header |
 
 #### User Management
 | Method | Endpoint | Description |
@@ -118,11 +121,11 @@ All protected endpoints require the `Authorization: Bearer <token>` header.
 #### Task Management (User-Scoped)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/v1/tasks` | List user's tasks |
-| `POST` | `/api/v1/tasks` | Create new task |
-| `GET` | `/api/v1/tasks/{id}` | Get specific task |
-| `PUT` | `/api/v1/tasks/{id}` | Update task |
-| `DELETE` | `/api/v1/tasks/{id}` | Delete task |
+| `GET` | `/api/v1/tasks/` | List user's tasks |
+| `POST` | `/api/v1/tasks/` | Create new task |
+| `GET` | `/api/v1/tasks/{id}/` | Get specific task |
+| `PUT` | `/api/v1/tasks/{id}/` | Update task |
+| `DELETE` | `/api/v1/tasks/{id}/` | Delete task |
 
 ### Example Usage
 
@@ -130,22 +133,21 @@ All protected endpoints require the `Authorization: Bearer <token>` header.
 # Set your token (from login response)
 export TOKEN="your-jwt-token-here"
 
-# Create a task
-curl -X POST http://localhost:8080/api/v1/tasks \
+# Create a task (status will be set to "pending" automatically)
+curl -X POST http://localhost:8080/api/v1/tasks/ \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Complete project",
-    "description": "Finish the final report",
-    "status": "pending"
+    "description": "Finish the final report"
   }'
 
 # List all your tasks
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/api/v1/tasks
+  http://localhost:8080/api/v1/tasks/
 
 # Update a task status
-curl -X PUT http://localhost:8080/api/v1/tasks/1 \
+curl -X PUT http://localhost:8080/api/v1/tasks/1/ \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "completed"}'
@@ -158,11 +160,10 @@ curl -X PUT http://localhost:8080/api/v1/tasks/1 \
 #### Core Configuration
 - `STORAGE_BACKEND` - "memory" (default) or "postgres"
 - `PORT` - Server port (default: 8080)
-- `GO_ENV` - "development" or "production"
 
 #### Authentication
 - `JWT_SECRET` - JWT signing secret (⚠️ **required for production**)
-- `JWT_EXPIRATION` - Token expiration duration (default: 24h)
+- JWT tokens have a fixed expiration of 24 hours (not configurable)
 
 #### Documentation (Security)
 - `ENABLE_DOCS` - Enable Swagger UI at `/docs/` (default: false, only enable in development)
@@ -193,6 +194,11 @@ export PG_DBNAME=voidrunner
 ```
 
 ⚠️ **Security Note:** The documentation endpoint is disabled by default. Only enable `ENABLE_DOCS=true` in development environments.
+
+**Docker Usage:** When using `make docker-up`, set `ENABLE_DOCS=true` as an environment variable to enable documentation:
+```bash
+ENABLE_DOCS=true make docker-up
+```
 
 ## Development
 

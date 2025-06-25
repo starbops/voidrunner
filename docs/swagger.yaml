@@ -48,6 +48,12 @@ definitions:
       user:
         $ref: '#/definitions/models.User'
     type: object
+  models.MessageResponse:
+    properties:
+      message:
+        example: Operation completed successfully
+        type: string
+    type: object
   models.RegisterRequest:
     properties:
       email:
@@ -527,6 +533,21 @@ paths:
       summary: Update current user profile
       tags:
       - Users
+  /welcome:
+    get:
+      consumes:
+      - application/json
+      description: Returns a welcome message and serves as a health check endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Welcome message
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+      summary: Welcome message
+      tags:
+      - System
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

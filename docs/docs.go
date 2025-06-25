@@ -565,6 +565,29 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/welcome": {
+            "get": {
+                "description": "Returns a welcome message and serves as a health check endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Welcome message",
+                "responses": {
+                    "200": {
+                        "description": "Welcome message",
+                        "schema": {
+                            "$ref": "#/definitions/models.MessageResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -636,6 +659,15 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/models.User"
+                }
+            }
+        },
+        "models.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Operation completed successfully"
                 }
             }
         },
