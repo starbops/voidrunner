@@ -92,7 +92,7 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		var taskList []models.Task
 		err := json.NewDecoder(resp.Body).Decode(&taskList)
 		if err != nil {
-			t.Fatalf("Failed to decode task list for %s backend: %v", backend, err)
+			t.Fatalf("Failed to decode task list for %s backend: %v", backendType, err)
 		}
 		resp.Body.Close()
 
@@ -133,7 +133,7 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		var user models.User
 		err := json.NewDecoder(resp.Body).Decode(&user)
 		if err != nil {
-			t.Fatalf("Failed to decode user registration response for %s backend: %v", backend, err)
+			t.Fatalf("Failed to decode user registration response for %s backend: %v", backendType, err)
 		}
 		resp.Body.Close()
 

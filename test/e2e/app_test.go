@@ -234,7 +234,7 @@ func testServerHealth(t *testing.T, helper *E2ETestHelper) {
 	var welcomeResponse struct {
 		Message string `json:"message"`
 	}
-	err = json.NewDecoder(resp.Body).Decode(&welcomeResponse)
+	err := json.NewDecoder(resp.Body).Decode(&welcomeResponse)
 	if err != nil {
 		t.Fatalf("Failed to decode welcome response: %v", err)
 	}
