@@ -65,7 +65,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode user response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if user.Username != registerData["username"] {
 		t.Errorf("Expected username %s, got %s", registerData["username"], user.Username)
@@ -91,7 +93,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode login response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if loginResponse.Token == "" {
 		t.Error("Expected non-empty token")
@@ -123,7 +127,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 		if err != nil {
 			t.Fatalf("Failed to decode task response: %v", err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		if task.Name != taskData.Name {
 			t.Errorf("Expected task name %s, got %s", taskData.Name, task.Name)
@@ -146,7 +152,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode task list response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if len(taskList) != len(createdTasks) {
 		t.Errorf("Expected %d tasks, got %d", len(createdTasks), len(taskList))
@@ -171,7 +179,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode updated task response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if updatedTaskResponse.Status != models.TaskStatusCompleted {
 		t.Errorf("Expected task status %s, got %s", models.TaskStatusCompleted, updatedTaskResponse.Status)
@@ -188,7 +198,9 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode retrieved task response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if retrievedTask.Status != models.TaskStatusCompleted {
 		t.Errorf("Expected retrieved task status %s, got %s", models.TaskStatusCompleted, retrievedTask.Status)
@@ -200,28 +212,36 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Task deletion failed with status %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Verify task was deleted
 	resp = helper.MakeRequest(t, "GET", fmt.Sprintf("/api/v1/tasks/%d/", taskToDelete.ID), nil, authToken)
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for deleted task, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Step 8: Logout user
 	resp = helper.MakeRequest(t, "POST", "/api/v1/logout", nil, authToken)
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Logout failed with status %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Step 9: Verify token is invalid after logout
 	resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/", nil, authToken)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 after logout, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 }
 
 func testServerHealth(t *testing.T, helper *E2ETestHelper) {
@@ -238,7 +258,9 @@ func testServerHealth(t *testing.T, helper *E2ETestHelper) {
 	if err != nil {
 		t.Fatalf("Failed to decode welcome response: %v", err)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if welcomeResponse.Message != "Welcome to the VoidRunner API" {
 		t.Errorf("Expected welcome message, got %s", welcomeResponse.Message)
@@ -249,7 +271,9 @@ func testServerHealth(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for invalid endpoint, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 }
 
 func testAuthenticationLifecycle(t *testing.T, helper *E2ETestHelper) {
@@ -258,14 +282,18 @@ func testAuthenticationLifecycle(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 without auth token, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test with invalid token
 	resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/", nil, "Bearer invalid.token.here")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 with invalid token, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Register and login user
 	token := helper.RegisterAndLoginUser(t)
@@ -275,7 +303,9 @@ func testAuthenticationLifecycle(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected 200 with valid token, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Logout
 	helper.Logout(t)
@@ -285,5 +315,7 @@ func testAuthenticationLifecycle(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 after logout, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 }

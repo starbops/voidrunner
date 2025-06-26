@@ -30,7 +30,11 @@ func (ptr *PostgresTaskRepository) GetTasks() ([]*models.Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the function
+		}
+	}()
 
 	var tasks []*models.Task
 	for rows.Next() {
@@ -113,7 +117,11 @@ func (ptr *PostgresTaskRepository) GetTasksByUserID(userID int) ([]*models.Task,
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks for user %d: %w", userID, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the function
+		}
+	}()
 
 	var tasks []*models.Task
 	for rows.Next() {

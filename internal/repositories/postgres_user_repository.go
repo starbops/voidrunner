@@ -30,7 +30,11 @@ func (pur *PostgresUserRepository) GetUsers() ([]*models.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the function
+		}
+	}()
 
 	var users []*models.User
 	for rows.Next() {

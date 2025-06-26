@@ -86,7 +86,9 @@ func testTaskManagementWorkflow(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for deleted task, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 }
 
 func testConcurrentUserOperations(t *testing.T, helper *E2ETestHelper) {
@@ -119,7 +121,9 @@ func testConcurrentUserOperations(t *testing.T, helper *E2ETestHelper) {
 				t.Errorf("User %d registration failed with status %d", userIndex, resp.StatusCode)
 				return
 			}
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 			// Login user
 			loginData := map[string]string{
@@ -137,8 +141,13 @@ func testConcurrentUserOperations(t *testing.T, helper *E2ETestHelper) {
 			var loginResponse struct {
 				Token string `json:"token"`
 			}
-			json.NewDecoder(resp.Body).Decode(&loginResponse)
-			resp.Body.Close()
+			if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
+		t.Errorf("Failed to decode login response: %v", err)
+		return
+	}
+			if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 			userTokens[userIndex] = loginResponse.Token
 		}(i)
@@ -173,8 +182,13 @@ func testConcurrentUserOperations(t *testing.T, helper *E2ETestHelper) {
 				}
 
 				var task models.Task
-				json.NewDecoder(resp.Body).Decode(&task)
-				resp.Body.Close()
+				if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+				t.Errorf("Failed to decode task response: %v", err)
+				continue
+			}
+				if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 				userTasks[userIndex][j] = task
 			}
@@ -198,8 +212,13 @@ func testConcurrentUserOperations(t *testing.T, helper *E2ETestHelper) {
 		}
 
 		var tasks []models.Task
-		json.NewDecoder(resp.Body).Decode(&tasks)
-		resp.Body.Close()
+		if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
+		t.Errorf("Failed to decode tasks response: %v", err)
+		return
+	}
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		// Tasks are global, so each user should see all tasks created by all users
 		if len(tasks) < tasksPerUser {
@@ -216,7 +235,9 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected 400 for invalid JSON, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test empty task creation (should succeed with empty name)
 	emptyTaskData := map[string]string{
@@ -227,14 +248,18 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Errorf("Expected 201 for task creation, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test accessing non-existent task
 	resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/99999/", nil, token)
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected 404 for non-existent task, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test updating non-existent task
 	updateData := map[string]string{
@@ -248,7 +273,9 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusNotFound && resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("Expected 404 or 500 for updating non-existent task, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test deleting non-existent task
 	resp = helper.MakeRequest(t, "DELETE", "/api/v1/tasks/99999/", nil, token)
@@ -256,7 +283,9 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("Expected 204 or 500 for deleting non-existent task, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test duplicate user registration
 	registerData := map[string]string{
@@ -273,14 +302,18 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Errorf("Expected 201 for first registration, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Second registration with same username should fail
 	resp = helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
 	if resp.StatusCode != http.StatusConflict {
 		t.Errorf("Expected 409 for duplicate registration, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Test login with wrong credentials
 	wrongLoginData := map[string]string{
@@ -292,7 +325,9 @@ func testErrorScenarios(t *testing.T, helper *E2ETestHelper) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("Expected 401 for wrong credentials, got %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 }
 
 func testDataConsistency(t *testing.T, helper *E2ETestHelper) {
@@ -325,8 +360,13 @@ func testDataConsistency(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var retrievedTasks []models.Task
-	json.NewDecoder(resp.Body).Decode(&retrievedTasks)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&retrievedTasks); err != nil {
+		t.Errorf("Failed to decode retrieved tasks: %v", err)
+		return
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	if len(retrievedTasks) < len(tasks) {
 		t.Errorf("Expected at least %d tasks, got %d", len(tasks), len(retrievedTasks))
@@ -360,8 +400,13 @@ func testDataConsistency(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var remainingTasks []models.Task
-	json.NewDecoder(resp.Body).Decode(&remainingTasks)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&remainingTasks); err != nil {
+		t.Errorf("Failed to decode remaining tasks: %v", err)
+		return
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Verify that the deleted tasks are no longer present
 	remainingTaskIDs := make(map[int]bool)
