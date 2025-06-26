@@ -142,7 +142,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var taskList []models.Task
-	json.NewDecoder(resp.Body).Decode(&taskList)
+	err = json.NewDecoder(resp.Body).Decode(&taskList)
+	if err != nil {
+		t.Fatalf("Failed to decode task list response: %v", err)
+	}
 	resp.Body.Close()
 
 	if len(taskList) != len(createdTasks) {
@@ -164,7 +167,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var updatedTaskResponse models.Task
-	json.NewDecoder(resp.Body).Decode(&updatedTaskResponse)
+	err = json.NewDecoder(resp.Body).Decode(&updatedTaskResponse)
+	if err != nil {
+		t.Fatalf("Failed to decode updated task response: %v", err)
+	}
 	resp.Body.Close()
 
 	if updatedTaskResponse.Status != models.TaskStatusCompleted {
@@ -178,7 +184,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var retrievedTask models.Task
-	json.NewDecoder(resp.Body).Decode(&retrievedTask)
+	err = json.NewDecoder(resp.Body).Decode(&retrievedTask)
+	if err != nil {
+		t.Fatalf("Failed to decode retrieved task response: %v", err)
+	}
 	resp.Body.Close()
 
 	if retrievedTask.Status != models.TaskStatusCompleted {
