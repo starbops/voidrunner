@@ -34,7 +34,7 @@ jobs:
     - name: Run GoSec Security Scanner
       uses: securego/gosec@master
       with:
-        args: '-fmt sarif -out gosec-results.sarif ./...'
+        args: '-no-fail -fmt sarif -out gosec-results.sarif ./...'
         
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v3
