@@ -175,8 +175,14 @@ func TestTaskHandler_GetTasks(t *testing.T) {
 	userID := 1
 	task1 := &models.Task{Name: "Task 1", Status: models.TaskStatusPending, UserID: userID}
 	task2 := &models.Task{Name: "Task 2", Status: models.TaskStatusCompleted, UserID: userID}
-	mockService.CreateTaskForUser(task1, userID)
-	mockService.CreateTaskForUser(task2, userID)
+	_, err := mockService.CreateTaskForUser(task1, userID)
+	if err != nil {
+		t.Fatalf("CreateTaskForUser() error = %v", err)
+	}
+	_, err = mockService.CreateTaskForUser(task2, userID)
+	if err != nil {
+		t.Fatalf("CreateTaskForUser() error = %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req = addUserContext(req, userID)
@@ -490,7 +496,10 @@ func TestTaskHandler_UpdateTask_ServiceError(t *testing.T) {
 		Description: "Test Description",
 		Status:      models.TaskStatusPending,
 	}
-	mockService.CreateTaskForUser(task, 1)
+	_, err := mockService.CreateTaskForUser(task, 1)
+	if err != nil {
+		t.Fatalf("CreateTaskForUser() error = %v", err)
+	}
 	
 	// Now set failGet to trigger error when trying to retrieve the task for update
 	mockService.failGet = true

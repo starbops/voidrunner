@@ -61,7 +61,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 	}
 
 	var user models.User
-	json.NewDecoder(resp.Body).Decode(&user)
+	err := json.NewDecoder(resp.Body).Decode(&user)
+	if err != nil {
+		t.Fatalf("Failed to decode user response: %v", err)
+	}
 	resp.Body.Close()
 
 	if user.Username != registerData["username"] {
@@ -84,7 +87,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 		Message string `json:"message"`
 		Token   string `json:"token"`
 	}
-	json.NewDecoder(resp.Body).Decode(&loginResponse)
+	err = json.NewDecoder(resp.Body).Decode(&loginResponse)
+	if err != nil {
+		t.Fatalf("Failed to decode login response: %v", err)
+	}
 	resp.Body.Close()
 
 	if loginResponse.Token == "" {
@@ -113,7 +119,10 @@ func testCompleteUserWorkflow(t *testing.T, helper *E2ETestHelper) {
 		}
 
 		var task models.Task
-		json.NewDecoder(resp.Body).Decode(&task)
+		err = json.NewDecoder(resp.Body).Decode(&task)
+		if err != nil {
+			t.Fatalf("Failed to decode task response: %v", err)
+		}
 		resp.Body.Close()
 
 		if task.Name != taskData.Name {

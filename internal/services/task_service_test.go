@@ -179,8 +179,14 @@ func TestTaskService_GetTasks(t *testing.T) {
 	task1 := &models.Task{Name: "Task 1", Status: models.TaskStatusPending}
 	task2 := &models.Task{Name: "Task 2", Status: models.TaskStatusCompleted}
 
-	service.CreateTask(task1)
-	service.CreateTask(task2)
+	_, err := service.CreateTask(task1)
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
+	_, err = service.CreateTask(task2)
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
 
 	tasks, err := service.GetTasks()
 	if err != nil {
