@@ -85,8 +85,14 @@ func TestMemoryTaskRepository_GetTasks(t *testing.T) {
 	task1 := &models.Task{Name: "Task 1", Status: models.TaskStatusPending}
 	task2 := &models.Task{Name: "Task 2", Status: models.TaskStatusCompleted}
 
-	repo.CreateTask(task1)
-	repo.CreateTask(task2)
+	_, err := repo.CreateTask(task1)
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
+	_, err = repo.CreateTask(task2)
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
 
 	tasks, err := repo.GetTasks()
 	if err != nil {

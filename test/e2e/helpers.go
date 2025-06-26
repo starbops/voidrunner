@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -147,7 +148,7 @@ func (h *E2ETestHelper) buildApplication(t *testing.T) {
 	}
 
 	// Check if we're in Docker (working directory starts with /app)
-	if filepath.HasPrefix(projectRoot, "/app") {
+	if strings.HasPrefix(filepath.Clean(projectRoot), "/app") {
 		// Navigate to /app root
 		appRoot := "/app"
 		// In Docker, the application is already built in the image
@@ -191,7 +192,7 @@ func (h *E2ETestHelper) startServer(t *testing.T) {
 	var binaryPath string
 	
 	// Check if we're in Docker (working directory starts with /app)
-	if filepath.HasPrefix(projectRoot, "/app") {
+	if strings.HasPrefix(filepath.Clean(projectRoot), "/app") {
 		binaryPath = "/app/voidrunner"
 		projectRoot = "/app"
 	} else {
@@ -255,7 +256,10 @@ func (h *E2ETestHelper) TearDown(t *testing.T) {
 		if err != nil {
 			t.Logf("Failed to kill server process: %v", err)
 		}
-		h.ServerProcess.Wait()
+		err = h.ServerProcess.Wait()
+		if err != nil {
+			t.Logf("Server process wait error: %v", err)
+		}
 	}
 
 	// Clean up test database

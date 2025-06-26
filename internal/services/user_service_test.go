@@ -166,8 +166,14 @@ func TestUserService_GetUsers(t *testing.T) {
 	user1 := &models.User{Username: "user1", Email: "user1@example.com"}
 	user2 := &models.User{Username: "user2", Email: "user2@example.com"}
 
-	service.CreateUser(user1)
-	service.CreateUser(user2)
+	_, err := service.CreateUser(user1)
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	_, err = service.CreateUser(user2)
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
 
 	users, err := service.GetUsers()
 	if err != nil {

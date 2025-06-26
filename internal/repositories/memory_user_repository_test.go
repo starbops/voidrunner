@@ -100,8 +100,14 @@ func TestMemoryUserRepository_GetUsers(t *testing.T) {
 	user1 := &models.User{Username: "user1", Email: "user1@example.com"}
 	user2 := &models.User{Username: "user2", Email: "user2@example.com"}
 
-	repo.CreateUser(user1)
-	repo.CreateUser(user2)
+	_, err := repo.CreateUser(user1)
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	_, err = repo.CreateUser(user2)
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
 
 	users, err := repo.GetUsers()
 	if err != nil {
