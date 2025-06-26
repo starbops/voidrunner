@@ -70,7 +70,9 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		if resp.StatusCode != http.StatusNotFound {
 			t.Errorf("Expected 404 for deleted task, got %d", resp.StatusCode)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 	})
 
 	// Test data persistence (for memory backend, this tests in-memory consistency)
@@ -94,7 +96,9 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		if err != nil {
 			t.Fatalf("Failed to decode task list for %s backend: %v", backendType, err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 
 		if len(taskList) < 3 {
 			t.Errorf("Expected at least 3 tasks, got %d", len(taskList))
@@ -135,7 +139,9 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		if err != nil {
 			t.Fatalf("Failed to decode user registration response for %s backend: %v", backendType, err)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 
 		// Verify user data
 		if user.Username != registerData["username"] {
@@ -160,8 +166,12 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		var loginResponse struct {
 			Token string `json:"token"`
 		}
-		json.NewDecoder(resp.Body).Decode(&loginResponse)
-		resp.Body.Close()
+		if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
+			t.Fatalf("Failed to decode login response: %v", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 
 		if loginResponse.Token == "" {
 			t.Error("Expected non-empty token")
@@ -172,7 +182,9 @@ func testBackendFunctionality(t *testing.T, helper *E2ETestHelper, backendType s
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected 200 for authenticated request, got %d", resp.StatusCode)
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("Failed to close response body: %v", err)
+		}
 	})
 }
 
@@ -221,8 +233,12 @@ func testBackendConsistency(t *testing.T) {
 	}
 
 	var memoryTaskList []models.Task
-	json.NewDecoder(memoryResp.Body).Decode(&memoryTaskList)
-	memoryResp.Body.Close()
+	if err := json.NewDecoder(memoryResp.Body).Decode(&memoryTaskList); err != nil {
+		t.Fatalf("Failed to decode memory task list: %v", err)
+	}
+	if err := memoryResp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	postgresResp := postgresHelper.MakeRequest(t, "GET", "/api/v1/tasks/", nil, postgresToken)
 	if postgresResp.StatusCode != http.StatusOK {
@@ -230,8 +246,12 @@ func testBackendConsistency(t *testing.T) {
 	}
 
 	var postgresTaskList []models.Task
-	json.NewDecoder(postgresResp.Body).Decode(&postgresTaskList)
-	postgresResp.Body.Close()
+	if err := json.NewDecoder(postgresResp.Body).Decode(&postgresTaskList); err != nil {
+		t.Fatalf("Failed to decode postgres task list: %v", err)
+	}
+	if err := postgresResp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 	// Both backends should have at least the test scenarios we created
 	if len(memoryTaskList) < len(testScenarios) {
@@ -333,7 +353,11 @@ func testBackendConsistency(t *testing.T) {
 			t.Errorf("Postgres backend should return 404 for deleted task, got %d", postgresResp.StatusCode)
 		}
 
-		memoryResp.Body.Close()
-		postgresResp.Body.Close()
+		if err := memoryResp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
+		if err := postgresResp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 	}
 }

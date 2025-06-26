@@ -29,8 +29,14 @@ func TestLoadConfig_PostgresBackend_Valid(t *testing.T) {
 	}
 
 	for key, value := range env {
-		os.Setenv(key, value)
-		defer os.Unsetenv(key)
+		if err := os.Setenv(key, value); err != nil {
+			t.Fatalf("Failed to set env var %s: %v", key, err)
+		}
+		defer func(k string) {
+			if err := os.Unsetenv(k); err != nil {
+				_ = err // Log error if needed
+			}
+		}(key)
 	}
 
 	cfg, err := LoadConfig()
@@ -75,8 +81,14 @@ func TestLoadConfig_PostgresBackend_MissingConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Clearenv()
 			for key, value := range tt.env {
-				os.Setenv(key, value)
-				defer os.Unsetenv(key)
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatalf("Failed to set env var %s: %v", key, err)
+				}
+				defer func(k string) {
+					if err := os.Unsetenv(k); err != nil {
+						_ = err // Log error if needed
+					}
+				}(key)
 			}
 
 			_, err := LoadConfig()

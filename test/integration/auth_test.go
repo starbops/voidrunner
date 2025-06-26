@@ -33,7 +33,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		registerJSON, _ := json.Marshal(registerData)
 		resp := helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusCreated {
 			t.Errorf("Expected status 201, got %d", resp.StatusCode)
@@ -91,7 +95,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		registerJSON, _ := json.Marshal(registerData)
 		resp := helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		if resp.StatusCode != http.StatusCreated {
 			t.Fatalf("First registration should succeed, got %d", resp.StatusCode)
@@ -108,7 +114,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		duplicateJSON, _ := json.Marshal(duplicateData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(duplicateJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusConflict {
 			t.Errorf("Expected status 409 for duplicate username, got %d", resp.StatusCode)
@@ -125,7 +135,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		duplicateEmailJSON, _ := json.Marshal(duplicateEmailData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(duplicateEmailJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusConflict {
 			t.Errorf("Expected status 409 for duplicate email, got %d", resp.StatusCode)
@@ -146,7 +160,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		registerJSON, _ := json.Marshal(registerData)
 		resp := helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		if resp.StatusCode != http.StatusCreated {
 			t.Fatalf("Registration failed: %d", resp.StatusCode)
@@ -160,7 +176,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		loginJSON, _ := json.Marshal(loginData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/login", bytes.NewBuffer(loginJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200 for login, got %d", resp.StatusCode)
@@ -191,7 +211,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		loginEmailJSON, _ := json.Marshal(loginEmailData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/login", bytes.NewBuffer(loginEmailJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200 for email login, got %d", resp.StatusCode)
@@ -209,7 +233,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		loginJSON, _ := json.Marshal(loginData)
 		resp := helper.MakeRequest(t, "POST", "/api/v1/login", bytes.NewBuffer(loginJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Errorf("Expected status 401 for non-existent user, got %d", resp.StatusCode)
@@ -226,7 +254,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		registerJSON, _ := json.Marshal(registerData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		// Test login with wrong password
 		wrongPassData := map[string]string{
@@ -236,7 +266,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		wrongPassJSON, _ := json.Marshal(wrongPassData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/login", bytes.NewBuffer(wrongPassJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Errorf("Expected status 401 for wrong password, got %d", resp.StatusCode)
@@ -249,7 +283,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Test accessing protected endpoint with valid token
 		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200 with valid token, got %d", resp.StatusCode)
@@ -258,7 +296,11 @@ func TestAuthenticationFlow(t *testing.T) {
 		// Test with malformed token
 		malformedToken := "malformed.token.here"
 		resp = helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, malformedToken)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Errorf("Expected status 401 with malformed token, got %d", resp.StatusCode)
@@ -271,7 +313,11 @@ func TestAuthenticationFlow(t *testing.T) {
 			rawToken = "just-a-raw-token-without-bearer"
 		}
 		resp = helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, rawToken)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		// This might return 200 if our auth implementation accepts raw tokens
 		t.Logf("Raw token test returned status: %d", resp.StatusCode)
@@ -283,7 +329,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Verify token works before logout
 		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("Token should work before logout, got %d", resp.StatusCode)
@@ -291,7 +339,11 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Logout
 		resp = helper.MakeRequest(t, "POST", "/api/v1/logout", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		// Accept both 200 and 204 as valid logout responses
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
@@ -302,7 +354,9 @@ func TestAuthenticationFlow(t *testing.T) {
 		// Note: This test depends on whether token revocation is implemented
 		// For JWT tokens, they might still be valid until expiration
 		resp = helper.MakeRequest(t, "GET", "/api/v1/users/", nil, token)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		// The behavior here depends on implementation:
 		// - If JWT revocation is implemented: should return 401
@@ -321,7 +375,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 		// Verify token works
 		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200 with fresh token, got %d", resp.StatusCode)
@@ -350,7 +406,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 				registerJSON, _ := json.Marshal(registerData)
 				resp := helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(registerJSON), "")
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 				if resp.StatusCode != http.StatusCreated {
 					results <- fmt.Errorf("registration failed for user %d: %d", userNum, resp.StatusCode)
@@ -365,7 +423,9 @@ func TestAuthenticationFlow(t *testing.T) {
 
 				loginJSON, _ := json.Marshal(loginData)
 				resp = helper.MakeRequest(t, "POST", "/api/v1/login", bytes.NewBuffer(loginJSON), "")
-				resp.Body.Close()
+				if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
+	}
 
 				if resp.StatusCode != http.StatusOK {
 					results <- fmt.Errorf("login failed for user %d: %d", userNum, resp.StatusCode)

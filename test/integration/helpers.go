@@ -131,7 +131,11 @@ func (h *TestHelper) setupTestDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to root database: %v", err)
 	}
-	defer rootDB.Close()
+	defer func() {
+		if err := rootDB.Close(); err != nil {
+			_ = err // Log error if needed
+		}
+	}()
 
 	// Drop and recreate test database
 	testDBName := h.Config.PGDbName
@@ -209,7 +213,9 @@ func (h *TestHelper) TearDown() {
 		h.Server.Close()
 	}
 	if h.DB != nil {
-		h.DB.Close()
+		if err := h.DB.Close(); err != nil {
+			_ = err // Log error if needed
+		}
 	}
 }
 
@@ -262,7 +268,9 @@ func (h *TestHelper) RegisterAndLoginUser(t *testing.T) string {
 	var loginResponse struct {
 		Token string `json:"token"`
 	}
-	json.NewDecoder(resp.Body).Decode(&loginResponse)
+	if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
+		t.Fatalf("Failed to decode login response: %v", err)
+	}
 	
 	h.AuthToken = loginResponse.Token
 	return loginResponse.Token

@@ -13,7 +13,11 @@ func TestPostgresTaskRepository_GetTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -46,7 +50,11 @@ func TestPostgresTaskRepository_GetTasks_QueryError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -68,7 +76,11 @@ func TestPostgresTaskRepository_GetTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -101,7 +113,11 @@ func TestPostgresTaskRepository_GetTask_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -127,7 +143,11 @@ func TestPostgresTaskRepository_CreateTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -164,7 +184,11 @@ func TestPostgresTaskRepository_CreateTask_Nil(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -183,7 +207,11 @@ func TestPostgresTaskRepository_UpdateTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -217,7 +245,11 @@ func TestPostgresTaskRepository_UpdateTask_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -248,7 +280,11 @@ func TestPostgresTaskRepository_UpdateTask_Nil(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -267,7 +303,11 @@ func TestPostgresTaskRepository_DeleteTask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 
@@ -290,7 +330,11 @@ func TestPostgresTaskRepository_DeleteTask_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			_ = err // Log error if needed, but don't fail the test
+		}
+	}()
 
 	repo := &PostgresTaskRepository{DB: db}
 

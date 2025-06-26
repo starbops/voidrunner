@@ -61,7 +61,11 @@ func (h *E2ETestHelper) getFreePort(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("Failed to find free port: %v", err)
 	}
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			_ = err // Log error if needed
+		}
+	}()
 
 	addr := listener.Addr().(*net.TCPAddr)
 	return fmt.Sprintf("%d", addr.Port)
@@ -84,7 +88,11 @@ func (h *E2ETestHelper) setupTestDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to root database: %v", err)
 	}
-	defer rootDB.Close()
+	defer func() {
+		if err := rootDB.Close(); err != nil {
+			_ = err // Log error if needed
+		}
+	}()
 
 	// Create test database
 	_, err = rootDB.Exec(fmt.Sprintf("CREATE DATABASE %s", h.TestDBName))
@@ -238,11 +246,15 @@ func (h *E2ETestHelper) waitForServer(t *testing.T) {
 	for i := 0; i < maxRetries; i++ {
 		resp, err := http.Get(h.ServerURL + "/api/v1/welcome")
 		if err == nil && resp.StatusCode == http.StatusOK {
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				_ = err // Log error if needed
+			}
 			return
 		}
 		if resp != nil {
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				_ = err // Log error if needed
+			}
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -270,7 +282,9 @@ func (h *E2ETestHelper) TearDown(t *testing.T) {
 
 func (h *E2ETestHelper) cleanupTestDatabase(t *testing.T) {
 	if h.TestDB != nil {
-		h.TestDB.Close()
+		if err := h.TestDB.Close(); err != nil {
+			_ = err // Log error if needed
+		}
 	}
 
 	// Connect to postgres database to drop test database
@@ -287,7 +301,11 @@ func (h *E2ETestHelper) cleanupTestDatabase(t *testing.T) {
 		t.Logf("Failed to connect to root database for cleanup: %v", err)
 		return
 	}
-	defer rootDB.Close()
+	defer func() {
+		if err := rootDB.Close(); err != nil {
+			_ = err // Log error if needed
+		}
+	}()
 
 	// Terminate connections to test database
 	_, _ = rootDB.Exec(fmt.Sprintf("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid()", h.TestDBName))
@@ -314,7 +332,9 @@ func (h *E2ETestHelper) RegisterAndLoginUser(t *testing.T) string {
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Registration failed with status %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 
 	// Login user
 	loginData := map[string]string{
@@ -331,8 +351,12 @@ func (h *E2ETestHelper) RegisterAndLoginUser(t *testing.T) string {
 	var loginResponse struct {
 		Token string `json:"token"`
 	}
-	json.NewDecoder(resp.Body).Decode(&loginResponse)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
+		t.Fatalf("Failed to decode login response: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 
 	h.AuthToken = loginResponse.Token
 	return loginResponse.Token
@@ -382,8 +406,12 @@ func (h *E2ETestHelper) CreateTask(t *testing.T, name, description string) *mode
 	}
 
 	var task models.Task
-	json.NewDecoder(resp.Body).Decode(&task)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+		t.Fatalf("Failed to decode task response: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 
 	return &task
 }
@@ -395,8 +423,12 @@ func (h *E2ETestHelper) GetTask(t *testing.T, taskID int) *models.Task {
 	}
 
 	var task models.Task
-	json.NewDecoder(resp.Body).Decode(&task)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+		t.Fatalf("Failed to decode task response: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 
 	return &task
 }
@@ -415,8 +447,12 @@ func (h *E2ETestHelper) UpdateTask(t *testing.T, taskID int, name, description s
 	}
 
 	var task models.Task
-	json.NewDecoder(resp.Body).Decode(&task)
-	resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+		t.Fatalf("Failed to decode task response: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 
 	return &task
 }
@@ -426,7 +462,9 @@ func (h *E2ETestHelper) DeleteTask(t *testing.T, taskID int) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Task deletion failed with status %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 }
 
 func (h *E2ETestHelper) Logout(t *testing.T) {
@@ -434,7 +472,9 @@ func (h *E2ETestHelper) Logout(t *testing.T) {
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("Logout failed with status %d", resp.StatusCode)
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		_ = err // Log error if needed
+	}
 	h.AuthToken = ""
 }
 

@@ -25,7 +25,11 @@ func TestAPIIntegration(t *testing.T) {
 
 	t.Run("Welcome Endpoint", func(t *testing.T) {
 		resp := helper.MakeRequest(t, "GET", "/api/v1/welcome", nil, "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -48,7 +52,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		// Test GET /api/v1/users/me (get current user profile)
 		resp := helper.MakeRequest(t, "GET", "/api/v1/users/me", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -77,7 +85,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		updateJSON, _ := json.Marshal(updateData)
 		resp = helper.MakeRequest(t, "PUT", "/api/v1/users/me", bytes.NewBuffer(updateJSON), token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -109,7 +121,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		taskJSON, _ := json.Marshal(taskData)
 		resp := helper.MakeRequest(t, "POST", "/api/v1/tasks/", bytes.NewBuffer(taskJSON), token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusCreated {
 			t.Errorf("Expected status 201, got %d", resp.StatusCode)
@@ -131,7 +147,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		// Test GET /api/v1/tasks/ (get all tasks)
 		resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -150,7 +170,11 @@ func TestAPIIntegration(t *testing.T) {
 		// Test GET /api/v1/tasks/{id}/
 		taskID := createdTask.ID
 		resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -175,7 +199,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		updateTaskJSON, _ := json.Marshal(updateTaskData)
 		resp = helper.MakeRequest(t, "PUT", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", bytes.NewBuffer(updateTaskJSON), token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -197,7 +225,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		// Test DELETE /api/v1/tasks/{id}/
 		resp = helper.MakeRequest(t, "DELETE", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusNoContent {
 			t.Errorf("Expected status 204, got %d", resp.StatusCode)
@@ -205,7 +237,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		// Verify task is deleted
 		resp = helper.MakeRequest(t, "GET", "/api/v1/tasks/"+strconv.Itoa(taskID)+"/", nil, token)
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusNotFound {
 			t.Errorf("Expected status 404 for deleted task, got %d", resp.StatusCode)
@@ -235,7 +271,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		for _, endpoint := range protectedEndpoints {
 			resp := helper.MakeRequest(t, endpoint.method, endpoint.path, nil, "")
-			defer resp.Body.Close()
+			defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 			// Logout endpoint might return 400 for bad request instead of 401
 			expectedStatuses := []int{http.StatusUnauthorized, http.StatusBadRequest}
@@ -260,7 +300,11 @@ func TestAPIIntegration(t *testing.T) {
 		invalidToken := "invalid.jwt.token"
 		for _, endpoint := range protectedEndpoints {
 			resp := helper.MakeRequest(t, endpoint.method, endpoint.path, nil, invalidToken)
-			defer resp.Body.Close()
+			defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 			// Some endpoints might return 500 for invalid tokens due to parsing errors
 			expectedStatuses := []int{http.StatusUnauthorized, http.StatusInternalServerError, http.StatusBadRequest}
@@ -285,7 +329,11 @@ func TestAPIIntegration(t *testing.T) {
 		// Test malformed JSON
 		malformedJSON := `{"name": "test", "invalid": }`
 		resp := helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBufferString(malformedJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected status 400 for malformed JSON, got %d", resp.StatusCode)
@@ -299,7 +347,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		incompleteJSON, _ := json.Marshal(incompleteData)
 		resp = helper.MakeRequest(t, "POST", "/api/v1/register", bytes.NewBuffer(incompleteJSON), "")
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 		if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected status 400 for incomplete registration data, got %d", resp.StatusCode)
@@ -322,7 +374,11 @@ func TestAPIIntegration(t *testing.T) {
 
 		for _, test := range wrongMethods {
 			resp := helper.MakeRequest(t, test.method, test.path, nil, token)
-			defer resp.Body.Close()
+			defer func() {
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("Failed to close response body: %v", err)
+			}
+		}()
 
 			// Go 1.23 routing might return 400 for unmatched method patterns, or 404 for non-existent routes
 			if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusNotFound {
