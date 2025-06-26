@@ -59,3 +59,19 @@ Jenkinsfile
 # Temporary files
 tmp/
 temp/
+
+# Generated documentation (will be generated during build)
+docs/
+
+# Test files and coverage reports
+test/
+coverage.html
+coverage.out
+*.test
+
+# Database migrations (handled externally, not used at runtime)
+db/
+
+# Development and project files
+CLAUDE.md
+CLAUDE.local.md

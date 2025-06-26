@@ -1,13 +1,14 @@
 # Build stage
 FROM golang:1.23-alpine AS builder
 
-# Install build dependencies
+# Install build dependencies including swag for docs generation
 RUN apk add --no-cache git ca-certificates tzdata
+RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 # Set working directory
 WORKDIR /app
 
-# Copy go mod and sum files
+# Copy go mod and sum files first for better caching
 COPY go.mod go.sum ./
 
 # Download dependencies
@@ -16,39 +17,33 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o voidrunner ./cmd/main.go
+# Generate OpenAPI documentation
+RUN swag init -g cmd/main.go -o docs
 
-# Final stage
-FROM alpine:latest
+# Build the application with size optimizations
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -a -installsuffix cgo \
+    -ldflags="-s -w" \
+    -o voidrunner ./cmd/main.go
 
-# Install ca-certificates for HTTPS calls
-RUN apk --no-cache add ca-certificates tzdata
+# Final stage - using distroless for minimal size and security
+FROM gcr.io/distroless/static:nonroot
 
-# Create non-root user
-RUN addgroup -g 1001 -S voidrunner && \
-    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G voidrunner -g voidrunner voidrunner
+# Copy ca-certificates from builder (needed for HTTPS calls if any)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-WORKDIR /app
+# Copy timezone data from builder (needed for time operations)
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy the binary from builder stage
-COPY --from=builder /app/voidrunner .
-
-# Copy database migrations
-COPY --from=builder /app/db ./db
-
-# Change ownership to non-root user
-RUN chown -R voidrunner:voidrunner /app
-
-# Switch to non-root user
-USER voidrunner
+COPY --from=builder /app/voidrunner /voidrunner
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/v1/welcome || exit 1
+# Health check removed for minimal image size
+# For health checks in production, use external monitoring or k8s probes
 
 # Run the application
-CMD ["./voidrunner"]
+# distroless/static:nonroot already runs as non-root user (65532:65532)
+CMD ["/voidrunner"]
