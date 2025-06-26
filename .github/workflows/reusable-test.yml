@@ -1,0 +1,154 @@
+name: Reusable Test and Build
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifacts:
+        description: 'Whether to upload build artifacts'
+        required: false
+        type: boolean
+        default: false
+      run-docker-test:
+        description: 'Whether to run Docker container tests'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: voidrunner
+          POSTGRES_DB: voidrunner_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: true
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Install swag CLI
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+      
+    - name: Generate and validate API documentation
+      run: make docs
+      
+    - name: Run unit tests
+      run: make test
+      
+    - name: Run integration tests
+      run: make test-integration
+      env:
+        TEST_PG_HOST: localhost
+        TEST_PG_PORT: 5432
+        TEST_PG_USER: voidrunner
+        TEST_PG_PASSWORD: password
+        TEST_PG_DBNAME: voidrunner_test
+      
+    - name: Run E2E tests (Memory Backend)
+      run: make test-e2e
+      env:
+        STORAGE_BACKEND: memory
+        
+    - name: Run E2E tests (PostgreSQL Backend)  
+      run: make test-e2e
+      env:
+        STORAGE_BACKEND: postgres
+        TEST_PG_HOST: localhost
+        TEST_PG_PORT: 5432
+        TEST_PG_USER: voidrunner
+        TEST_PG_PASSWORD: password
+        TEST_PG_DBNAME: voidrunner_reusable_e2e_test
+      
+  build:
+    name: Build and Test Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: true
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Install swag CLI
+      run: go install github.com/swaggo/swag/cmd/swag@latest
+      
+    - name: Generate API documentation
+      run: make docs
+        
+    - name: Build application
+      run: make build
+      
+    - name: Upload build artifacts
+      if: inputs.upload-artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: voidrunner-${{ github.sha }}
+        path: bin/voidrunner
+        retention-days: 30
+        
+    - name: Build Docker image
+      run: make docker-build
+      
+    - name: Test Docker image
+      if: inputs.run-docker-test
+      run: |
+        # Verify image was built successfully
+        docker images voidrunner:latest
+        echo "Docker image size: $(docker images voidrunner:latest --format '{{.Size}}')"
+        
+        # Test container with memory backend
+        echo "Testing Docker container with memory backend..."
+        docker run -d -p 8080:8080 -e STORAGE_BACKEND=memory --name voidrunner-test voidrunner:latest
+        
+        # Wait for container to be ready (with timeout)
+        echo "Waiting for container to be ready..."
+        timeout 60s bash -c 'until curl -f http://localhost:8080/api/v1/welcome; do sleep 2; done'
+        
+        # Test basic API functionality
+        echo "Testing API endpoints..."
+        curl -f http://localhost:8080/api/v1/welcome
+        
+        # Clean up
+        docker stop voidrunner-test
+        docker rm voidrunner-test
+        
+    - name: Clean up build artifacts (PR only)
+      if: ${{ !inputs.upload-artifacts }}
+      run: make clean
+      
+    - name: Clean up Docker artifacts (PR only)
+      if: ${{ !inputs.upload-artifacts }}
+      run: |
+        docker system prune -f
+        docker rmi voidrunner:latest 2>/dev/null || true
