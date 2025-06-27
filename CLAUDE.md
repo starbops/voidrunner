@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make docker-test-all` - Run all test suites in Docker containers
 
 ### Documentation Commands
-- `make docs` - Generate and validate OpenAPI documentation
+- `make docs` - Generate and validate OpenAPI documentation (auto-installs swag CLI if needed)
 - `make docs-clean` - Remove generated documentation files
 
 ## Architecture Overview
@@ -48,7 +48,7 @@ VoidRunner is a Go HTTP API server for multi-user task management with JWT authe
 - **Minimum**: Go 1.23.10 (for security patches)
 - **CI/CD**: All GitHub Actions workflows use Go 1.23.10 to address govulncheck vulnerabilities
 - **Security**: Older versions have known vulnerabilities (GO-2025-3751, GO-2025-3750)
-- **Module**: Uses `go.mod` with Go 1.23.0 but should use Go 1.23.10+ for CI/security
+- **Module**: Uses `go.mod` with Go 1.23.10 for security compliance across all environments
 
 ### Core Architecture Pattern
 The codebase follows a layered architecture with dependency injection:
@@ -175,7 +175,7 @@ Multi-stage Docker builds with production security:
 - **Security**: Non-root user execution using distroless/static:nonroot (user 65532), minimal attack surface
 - **Base Images**: golang:1.23-alpine for build, gcr.io/distroless/static:nonroot for runtime
 - **Development Support**: Local development with `make run` or `make run-postgres` for full PostgreSQL setup
-- **Health Monitoring**: Built-in health checks for containerized deployments
+- **Health Monitoring**: External monitoring recommended due to distroless compatibility (internal health checks removed)
 
 ### Error Handling and Logging
 Structured approach to error management:
