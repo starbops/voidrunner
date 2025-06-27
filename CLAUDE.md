@@ -11,9 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Test Commands
 - `make test` - Run unit tests with coverage
-- `make test-integration` - Run integration tests
+- `make test-integration` - Run integration tests (uses -count=1 flag to prevent caching)
 - `make test-e2e` - Run end-to-end tests (use STORAGE_BACKEND env var for backend selection)
 - `make test-all` - Run all test suites (unit, integration, E2E)
+- `go test -v ./test/integration/...` - Run integration tests directly
+- `go test -v ./test/e2e/...` - Run E2E tests directly
+- `STORAGE_BACKEND=postgres make test-e2e` - Run E2E tests with specific backend
 
 ### Database Commands
 - `make db-up` - Start PostgreSQL container with docker-compose
@@ -28,7 +31,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make docker-up` - Start all services with docker-compose (use DETACH=1 for detached mode)
 - `make docker-down` - Stop all docker-compose services
 - `make docker-logs` - Show logs from all services
-- `make docker-test` - Run tests inside Docker container
+- `make docker-test` - Run unit tests inside Docker container
+- `make docker-test-integration` - Run integration tests with PostgreSQL in Docker
+- `make docker-test-e2e` - Run E2E tests with both backends in Docker
+- `make docker-test-all` - Run all test suites in Docker containers
 
 ### Documentation Commands
 - `make docs` - Generate and validate OpenAPI documentation
@@ -37,6 +43,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture Overview
 
 VoidRunner is a Go HTTP API server for multi-user task management with JWT authentication, pluggable storage backends, and containerized deployment.
+
+### Go Version Requirements
+- **Minimum**: Go 1.23.10 (for security patches)
+- **CI/CD**: All GitHub Actions workflows use Go 1.23.10 to address govulncheck vulnerabilities
+- **Security**: Older versions have known vulnerabilities (GO-2025-3751, GO-2025-3750)
 
 ### Core Architecture Pattern
 The codebase follows a layered architecture with dependency injection:
@@ -144,10 +155,11 @@ Key external dependencies:
 
 ### Development Workflow
 1. Use `make docker-up` for full-stack development with PostgreSQL
-2. Use `make test-all` to run complete test suite across all backends
-3. Use `make docs` to generate and validate OpenAPI documentation
-4. Set `ENABLE_DOCS=true` for development documentation access
+2. Use `ENABLE_DOCS=true make docker-up` to enable API documentation in development
+3. Use `make test-all` to run complete test suite across all backends
+4. Use `make docs` to generate and validate OpenAPI documentation
 5. Database migrations are automatically applied on startup
+6. Integration tests use `-count=1` flag to prevent caching and ensure fresh database state detection
 
 ### OpenAPI Documentation Integration
 Code-first documentation with automated generation:
@@ -170,6 +182,13 @@ Structured approach to error management:
 - **Error Responses**: Standardized JSON error responses with appropriate HTTP status codes
 - **Authentication Errors**: Clear distinction between unauthorized and forbidden operations
 - **Validation Errors**: Detailed error messages for request validation failures
+
+### GitHub Actions CI/CD
+Three-tier GitHub Actions workflow structure:
+- **quality.yml**: Linting, security scanning (GoSec, govulncheck), and Docker security (Trivy)
+- **reusable-test.yml**: Reusable workflow for comprehensive testing (unit, integration, E2E)
+- **ci.yml**: Main branch workflow (uploads artifacts, runs Docker tests)
+- **pr.yml**: Pull request workflow (lighter testing, no artifact uploads)
 
 ### Production Deployment
 1. Build with `make docker-build`
