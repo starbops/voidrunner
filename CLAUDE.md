@@ -48,6 +48,7 @@ VoidRunner is a Go HTTP API server for multi-user task management with JWT authe
 - **Minimum**: Go 1.23.10 (for security patches)
 - **CI/CD**: All GitHub Actions workflows use Go 1.23.10 to address govulncheck vulnerabilities
 - **Security**: Older versions have known vulnerabilities (GO-2025-3751, GO-2025-3750)
+- **Module**: Uses `go.mod` with Go 1.23.0 but should use Go 1.23.10+ for CI/security
 
 ### Core Architecture Pattern
 The codebase follows a layered architecture with dependency injection:
@@ -83,7 +84,6 @@ Environment-based configuration with validation and security warnings:
 #### Core Configuration
 - `STORAGE_BACKEND`: "memory" (default) or "postgres"
 - `PORT`: Server port (default: 8080)
-- `GO_ENV`: "development" or "production" (affects logging level)
 
 #### PostgreSQL Configuration (required when using postgres backend)
 - `PG_HOST`: PostgreSQL server host
@@ -94,7 +94,7 @@ Environment-based configuration with validation and security warnings:
 
 #### Authentication Configuration
 - `JWT_SECRET`: Secret key for JWT token signing (REQUIRED in production)
-- `JWT_EXPIRATION`: Token expiration duration (default: 24h)
+- `JWT_EXPIRATION`: Token expiration duration (fixed at 24h, not configurable via env)
 
 #### Documentation Configuration
 - `ENABLE_DOCS`: Enable Swagger documentation endpoint at `/docs/` (default: false)
@@ -172,7 +172,8 @@ Code-first documentation with automated generation:
 ### Containerization Architecture
 Multi-stage Docker builds with production security:
 - **Multi-stage Build**: Separate build and runtime containers for optimized image size
-- **Security**: Non-root user execution (voidrunner:1001), Alpine Linux base image
+- **Security**: Non-root user execution using distroless/static:nonroot (user 65532), minimal attack surface
+- **Base Images**: golang:1.23-alpine for build, gcr.io/distroless/static:nonroot for runtime
 - **Development Support**: Local development with `make run` or `make run-postgres` for full PostgreSQL setup
 - **Health Monitoring**: Built-in health checks for containerized deployments
 
@@ -185,10 +186,11 @@ Structured approach to error management:
 
 ### GitHub Actions CI/CD
 Three-tier GitHub Actions workflow structure:
-- **quality.yml**: Linting, security scanning (GoSec, govulncheck), and Docker security (Trivy)
-- **reusable-test.yml**: Reusable workflow for comprehensive testing (unit, integration, E2E)
+- **quality.yml**: Linting (golangci-lint), security scanning (GoSec with SARIF, govulncheck), and Docker security (Trivy)
+- **reusable-test.yml**: Reusable workflow for comprehensive testing (unit, integration, E2E with both backends)
 - **ci.yml**: Main branch workflow (uploads artifacts, runs Docker tests)
 - **pr.yml**: Pull request workflow (lighter testing, no artifact uploads)
+- **Security Integration**: SARIF uploads to GitHub Security tab for vulnerability tracking
 
 ### Production Deployment
 1. Build with `make docker-build`
