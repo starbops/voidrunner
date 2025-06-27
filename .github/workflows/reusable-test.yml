@@ -22,7 +22,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16-alpine
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: voidrunner
@@ -79,7 +79,7 @@ jobs:
         TEST_PG_PORT: 5432
         TEST_PG_USER: voidrunner
         TEST_PG_PASSWORD: password
-        TEST_PG_DBNAME: voidrunner_reusable_e2e_test
+        TEST_PG_DBNAME: voidrunner_test
       
   build:
     name: Build and Test Docker

@@ -103,6 +103,7 @@ docker-test-all: docker-test docker-test-integration docker-test-e2e
 .PHONY: docs docs-clean
 docs:
 	@echo "Generating OpenAPI documentation..."
+	@which swag > /dev/null || (echo "Installing swag CLI..." && go install github.com/swaggo/swag/cmd/swag@latest)
 	@swag init -g cmd/main.go -o docs
 	@swag fmt
 
